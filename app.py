@@ -3,7 +3,6 @@ import google.generativeai as genai
 import os
 
 # --- CONFIG ---
-# Updated to match the path provided in your message
 PAGE_LOGO = "535a00a0-0968-491d-92db-30c32ced7ac6.webp" 
 
 if "GEMINI_API_KEY" in st.secrets:
@@ -16,7 +15,6 @@ genai.configure(api_key=API_KEY)
 model = genai.GenerativeModel('gemini-2.0-flash')
 
 def main():
-    # Safety Check for Image
     image_exists = os.path.exists(PAGE_LOGO)
     
     st.set_page_config(
@@ -78,10 +76,14 @@ def main():
             with st.spinner(""):
                 prompt = f"""
                 Act as a Mallu boyfriend. 
-                Tone: 60% Fun, 20% Romantic, 20% Serious.
+                Tone: 60% Fun (teasing), 20% Casual Romantic (supportive), 20% Serious (grounded).
                 Language: 50% Manglish, 50% Simple English. Main content in English.
+                Word Count: Max 400 words.
                 Context: Mood is {st.session_state.mood}, detail: {user_text}.
-                Instructions: Be a human. Use 'Nee/Ninakku'. 50/50 mix.
+                STRICT RULES:
+                1. NO over-romantic addresses (Avoid 'dear', 'darling', 'ponne', 'ente lokame').
+                2. Use natural addresses like 'Edooo' or 'Nee'.
+                3. Be a supportive partner. No labels or intros.
                 """
                 res = model.generate_content(prompt)
                 st.session_state.note = res.text
@@ -114,11 +116,12 @@ def main():
             with st.spinner("Finding something..."):
                 sub_prompt = f"""
                 You are a Mallu boyfriend. Suggest a real {sel} for mood {st.session_state.mood}.
-                FORMAT: [Natural Banter] || [Scene Name] || [Search Link] || [Real Dialogue]
+                FORMAT: [Natural Banter] || [YouTube Search Link]
                 RULES:
-                1. START IMMEDIATELY with the banter (60% Fun, 20% Rom, 20% Ser). 
-                2. If Malayalam: Malayalam script. If Friends: English.
-                3. Link: Provide a direct YouTube search link.
+                1. START IMMEDIATELY with the banter. 
+                2. Tone: 60% Fun, 20% Rom, 20% Ser. 
+                3. AVOID dramatic/romantic words in Malayalam script. Keep it like real-life teasing.
+                4. Link: Direct YouTube search link.
                 """
                 res = model.generate_content(sub_prompt)
                 st.session_state.final_res = res.text
@@ -127,12 +130,10 @@ def main():
     # --- 4. DISPLAY RESULT ---
     if st.session_state.final_res:
         parts = st.session_state.final_res.split("||")
-        if len(parts) >= 4:
+        if len(parts) >= 2:
             st.divider()
             st.write(parts[0].strip())
-            st.info(f"🎬 **{parts[1].strip()}**")
-            st.markdown(f"🔗 [Watch on YouTube]({parts[2].strip()})")
-            st.markdown(f"*🗣️ {parts[3].strip()}*")
+            st.markdown(f"🔗 **[Watch here]({parts[1].strip()})**")
 
     if st.session_state.note:
         st.write("---")
