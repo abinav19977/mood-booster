@@ -27,6 +27,18 @@ def main():
         #MainMenu {visibility: hidden;} footer {visibility: hidden;} header {visibility: hidden;}
         .big-title { font-size: 50px !important; font-weight: 700; color: #FF4B4B; margin: 0; line-height: 1.2; }
         .stButton>button { width: 100%; border-radius: 10px; height: 3em; font-weight: bold; }
+        .watch-btn {
+            background-color: #FF4B4B;
+            color: white;
+            padding: 12px 24px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 10px;
+            margin: 10px 0px;
+        }
         </style>
         """, unsafe_allow_html=True)
 
@@ -61,27 +73,36 @@ def main():
 
     if st.session_state.mood:
         st.divider()
-        elab = st.toggle("Edooo, Kooduthal enthelum parayanundo?")
-        user_text = st.text_area("Para...", placeholder="Enthelum vishesham undo?") if elab else ""
+        elab = st.toggle("Kooduthal enthelum parayanundo?")
+        user_text = st.text_area("Para...", placeholder="Endhaanappa vishesham?") if elab else ""
 
         if st.button("🚀 Paraa"):
             with st.spinner(""):
-                prompt = f"Act as a Mallu boyfriend. Tone: 60% Funny, 10% Warm, 30% Teasing. Lang: 50% Manglish/English. Max 250 words. Mood: {st.session_state.mood}, Detail: {user_text}. Use 'Edooo/Nee'."
+                prompt = f"""
+                Act as a Mallu partner. Mood: {st.session_state.mood}, Details: {user_text}.
+                Tone: 60% Fun/Sarcastic, 10% Care/Warmth, 30% Teasing.
+                Language: Mix of Manglish and English. 
+                STRICT RULES:
+                - Do NOT use cringe romantic names like 'honey' or 'sweetheart'. 
+                - Use 'Edo' or 'Nee'. 
+                - Talk like a real Malayali would talk to their partner (natural, relaxed, zero drama).
+                - Keep it under 250 words.
+                """
                 res = model.generate_content(prompt)
                 st.session_state.note = res.text
 
-    # --- 2. THE NOTE & CHOICES ---
+    # --- 2. THE NOTE ---
     if st.session_state.note:
         st.success("💌 **Message:**")
         st.write(st.session_state.note)
         
         if not st.session_state.show_choices and not st.session_state.play_spell_bee:
-            st.write("Edooo, mood boost cheyyan oru scene suggest cheyyatte?")
+            st.write("Mood onn boost cheyyan oru scene ayalo?")
             y, n = st.columns(2)
-            if y.button("✅ Yes"):
+            if y.button("✅ Pinne enna!"):
                 st.session_state.show_choices = True
                 st.rerun()
-            if n.button("❌ No"):
+            if n.button("❌ Venda"):
                 st.session_state.play_spell_bee = True
                 st.rerun()
 
@@ -100,31 +121,32 @@ def main():
         if st.button("Check Spelling"):
             if guess.lower() == st.session_state.current_word.lower():
                 st.balloons()
-                st.success("Good work! Achumol brilliance thanne! 😎")
+                st.success("Correct-aanu! Athu pottu, nee entha spelling bee winner aano? 😉")
+                if st.button("Next Word"):
+                    st.session_state.current_word = random.choice(SPELL_BEE_WORDS)
+                    st.rerun()
             else:
-                st.error("Try again! Spelling mistakes are your specialty! 😉")
+                st.error("Thetti! Ithokke itra paadaano? Onnu koodi nokku! 😄")
 
     # --- 4. MOVIE CHOICE ---
     if st.session_state.show_choices and not st.session_state.final_res:
         st.divider()
-        st.write("Pick your vibe:")
+        st.write("Vibe select cheyyu:")
         c1, c2 = st.columns(2)
         sel = None 
-        if c1.button("🍿 Malayalam"): sel = "Malayalam Movie Comedy"
-        if c2.button("☕ Friends"): sel = "Friends Series Funny"
+        if c1.button("🍿 Malayalam Comedy"): sel = "Malayalam Movie Comedy Best Scene"
+        if c2.button("☕ Friends"): sel = "Friends TV Show Chandler Joey funny clip"
         
         if sel:
             with st.spinner("Finding video..."):
                 sub_prompt = f"""
-                Suggest a real YouTube video link for {sel}.
+                Suggest a real YouTube video URL for {sel} based on mood {st.session_state.mood}.
                 FORMAT: [Banter] || [YouTube URL]
                 RULES: 
-                1. BANTER: Exactly 2 lines. 
-                   - If Malayalam Movie: Use Malayalam script.
-                   - If Friends: Use English.
-                   - Tone: 60% Fun, 10% Romantic, 30% Teasing.
-                2. URL: A direct YouTube URL (e.g., https://www.youtube.com/watch?v=VIDEO_ID).
-                3. DO NOT include any introductory text or labels.
+                - Banter: Exactly 2 lines. Use Malayalam script for Malayalam movies. English for Friends. 
+                - Tone: Funny/Teasing. 
+                - URL: MUST be a real direct link. 
+                - Example: [Banter] || https://www.youtube.com/watch?v=h3ka9dCpN0I
                 """
                 res = model.generate_content(sub_prompt)
                 st.session_state.final_res = res.text
@@ -135,9 +157,9 @@ def main():
         if len(parts) >= 2:
             st.divider()
             st.write(parts[0].strip())
-            # Directly use the URL in a standard anchor tag to ensure external redirect
             video_url = parts[1].strip()
-            st.markdown(f'<a href="{video_url}" target="_blank" style="text-decoration:none;"><button style="background-color:#FF4B4B; color:white; border:none; padding:10px 20px; border-radius:10px; cursor:pointer; font-weight:bold;">📺 Watch on YouTube</button></a>', unsafe_allow_html=True)
+            # Direct link button using HTML for reliable redirection
+            st.markdown(f'<a href="{video_url}" target="_blank" class="watch-btn">📺 Watch on YouTube</a>', unsafe_allow_html=True)
 
     if st.session_state.note:
         st.write("---")
