@@ -35,7 +35,6 @@ def main():
     if "note" not in st.session_state: st.session_state.note = None
     if "show_choices" not in st.session_state: st.session_state.show_choices = False
     if "final_res" not in st.session_state: st.session_state.final_res = None
-    if "choice_type" not in st.session_state: st.session_state.choice_type = None
 
     # --- 1. MOOD SELECTION ---
     st.write("Edooo, Mood engane undu?")
@@ -58,15 +57,15 @@ def main():
         if st.button("🚀 Boost Me"):
             with st.spinner(""):
                 prompt = f"""
-                Act as a Malayali boyfriend. Language: Simple English mixed with natural Manglish.
+                Act as a Malayali boyfriend. Language: 70% Simple English, 30% Manglish.
                 Mood: {st.session_state.mood}. Detail: {user_text}.
-                Rules: Be chill and caring. No drama. No translations. Use 'Nee/Ninakku'.
-                Suggest Kerala remedies if she mentions a physical problem.
+                Rules: Be chill, caring, and human. No drama. No translations. Use 'Nee/Ninakku'.
+                Suggest Kerala home remedies if she has a physical problem. 
                 """
                 res = model.generate_content(prompt)
                 st.session_state.note = res.text
 
-    # --- 2. NOTE & CHOICE ---
+    # --- 2. THE NOTE & CHOICE ---
     if st.session_state.note:
         st.success("💌 **Message:**")
         st.write(st.session_state.note)
@@ -91,23 +90,28 @@ def main():
         if c2.button("☕ Friends"): choice = "Friends Series"
         
         if choice:
-            st.session_state.choice_type = choice
-            with st.spinner("Finding a scene..."):
+            with st.spinner("Finding a video..."):
                 sub_prompt = f"""
-                Suggest a {choice} scene that matches the vibe of mood: {st.session_state.mood} and context: "{user_text}".
-                If no exact match, pick a famous funny/happy scene.
-                Format STRICTLY: [Scene Name] || [YouTube Video ID] || [Famous Dialogue] || [Troll Comment]
+                Suggest a {choice} scene for mood: {st.session_state.mood} and context: "{user_text}".
                 
-                RULES for Troll Comment:
-                1. Max 4-5 lines.
-                2. If Malayalam Movie was picked: Write the troll in MALAYALAM SCRIPT (മലയാളം).
-                3. If Friends was picked: Write the troll in NATURAL ENGLISH.
-                4. Connect it to her situation naturally.
+                MANDATORY RULE: 
+                - You MUST provide a real YouTube Video ID. 
+                - If no exact match for "{user_text}" exists, pick a famous scene with similar energy.
+                - NO text-only replies or excuses.
+                
+                Format STRICTLY: [Scene Name] || [YouTube Video ID] || [Famous Dialogue] || [Cute Troll Comment]
+                
+                TROLL RULES: 
+                - Make it a cute, funny boyfriend-style roast. 
+                - Connect it to her mood/context AND the movie scene.
+                - If Malayalam Movie: Write in MALAYALAM SCRIPT (മലയാളം).
+                - If Friends: Write in English.
+                - Max 3-4 lines.
                 """
                 res = model.generate_content(sub_prompt)
                 st.session_state.final_res = res.text
 
-    # --- 4. VIDEO & BANTER ---
+    # --- 4. VIDEO & CUTE TROLL ---
     if st.session_state.final_res:
         parts = st.session_state.final_res.split("||")
         if len(parts) >= 4:
@@ -115,7 +119,8 @@ def main():
             st.info(f"🎬 **For you:** {parts[0].strip()}")
             st.video(f"https://www.youtube.com/watch?v={parts[1].strip()}") 
             st.markdown(f"**🗣️ {parts[2].strip()}**")
-            st.write(parts[3].strip())
+            # This is the cute troll section
+            st.warning(f"😜 **Hehe...**\n\n{parts[3].strip()}")
 
     if st.session_state.note:
         st.write("---")
