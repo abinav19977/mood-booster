@@ -1,13 +1,9 @@
 import streamlit as st
 import google.generativeai as genai
 import os
-from gtts import gTTS
-import random
-import io
 
 # --- CONFIG ---
 PAGE_LOGO = "535a00a0-0968-491d-92db-30c32ced7ac6.webp" 
-SPELL_BEE_WORDS = ["Enthusiastic", "Serendipity", "Magnanimous", "Quintessential", "Pharaoh", "Onomatopoeia", "Bourgeois", "Mischievous"]
 
 if "GEMINI_API_KEY" in st.secrets:
     API_KEY = st.secrets["GEMINI_API_KEY"]
@@ -47,6 +43,8 @@ def main():
     with head_col1:
         if image_exists:
             st.image(PAGE_LOGO, width=90)
+        else:
+            st.warning("📸 Image missing")
     with head_col2:
         st.markdown('<p class="big-title">Achumol is...</p>', unsafe_allow_html=True)
 
@@ -55,8 +53,6 @@ def main():
     if "note" not in st.session_state: st.session_state.note = None
     if "show_choices" not in st.session_state: st.session_state.show_choices = False
     if "final_res" not in st.session_state: st.session_state.final_res = None
-    if "play_spell_bee" not in st.session_state: st.session_state.play_spell_bee = False
-    if "current_word" not in st.session_state: st.session_state.current_word = None
 
     # --- 1. MOOD SELECTION ---
     st.write("Edooo, Mood engane undu?")
@@ -70,7 +66,6 @@ def main():
             st.session_state.note = None
             st.session_state.show_choices = False
             st.session_state.final_res = None
-            st.session_state.play_spell_bee = False
 
     if st.session_state.mood:
         st.divider()
@@ -79,70 +74,60 @@ def main():
 
         if st.button("🚀 Paraa"):
             with st.spinner(""):
-                prompt = f"Act as a Mallu boyfriend. Tone: 60% Funny, 10% Warm, 30% Teasing. Lang: 50% Manglish/English. Max 250 words. Mood: {st.session_state.mood}, Detail: {user_text}. Use 'Edooo/Nee'. No filmy malayalam."
+                prompt = f"""
+                Act as a Mallu boyfriend. 
+                Tone Ratio: 60% Funny (humor), 10% Romantic (warmth/care), 30% Teasing (playful poking/sarcasm).
+                Language: 50% Manglish, 50% Simple English.
+                Length: Strictly max 250 words.
+                Context: Mood is {st.session_state.mood}, detail: {user_text}.
+                STRICT RULES:
+                1. NO filmy Malayalam romantic addresses. Use 'Edooo' or 'Nee'.
+                2. Use teasing to keep it light but show care in the 10% romantic part.
+                3. No robotic intros or labels.
+                """
                 res = model.generate_content(prompt)
                 st.session_state.note = res.text
 
-    # --- 2. THE NOTE & CHOICES ---
+    # --- 2. THE NOTE ---
     if st.session_state.note:
         st.success("💌 **Message:**")
         st.write(st.session_state.note)
         
-        if not st.session_state.show_choices and not st.session_state.play_spell_bee:
+        if not st.session_state.show_choices:
             st.write("Edooo, mood boost cheyyan oru scene suggest cheyyatte?")
             y, n = st.columns(2)
             if y.button("✅ Yes"):
                 st.session_state.show_choices = True
                 st.rerun()
             if n.button("❌ No"):
-                st.session_state.play_spell_bee = True
-                st.rerun()
+                st.info("Okay Edooo, take care! ❤️")
 
-    # --- 3. SPELL BEE GAME ---
-    if st.session_state.play_spell_bee:
-        st.divider()
-        st.subheader("🐝 Spell Bee Time!")
-        st.write("Video venda alle? Enna namukku oru Spell Bee kalichalo?")
-        
-        if not st.session_state.current_word:
-            st.session_state.current_word = random.choice(SPELL_BEE_WORDS)
-
-        try:
-            tts = gTTS(text=st.session_state.current_word, lang='en')
-            audio_fp = io.BytesIO()
-            tts.write_to_fp(audio_fp)
-            st.audio(audio_fp, format='audio/mp3')
-            st.caption("Click play to hear the word.")
-        except:
-            st.error("Audio error. Try again!")
-
-        guess = st.text_input("Type the spelling here:", key="spell_input").strip()
-        if st.button("Check Spelling"):
-            if guess.lower() == st.session_state.current_word.lower():
-                st.balloons()
-                st.success("Good work! Achumol brilliance thanne! 😎")
-                if st.button("Next Word"):
-                    st.session_state.current_word = random.choice(SPELL_BEE_WORDS)
-                    st.rerun()
-            else:
-                st.error("Try again! Spelling mistakes are your specialty ennu thonunnu! 😉")
-
-    # --- 4. MOVIE CHOICE ---
+    # --- 3. MOVIE CHOICE ---
     if st.session_state.show_choices and not st.session_state.final_res:
         st.divider()
         st.write("Pick your vibe:")
         c1, c2 = st.columns(2)
+        
         sel = None 
         if c1.button("🍿 Malayalam"): sel = "Malayalam Movie Comedy Best Scenes"
-        if c2.button("☕ Friends"): sel = "Friends TV Show funny moments"
+        if c2.button("☕ Friends"): sel = "Friends TV Show Chandler Joey funny moments"
         
         if sel:
             with st.spinner("Searching..."):
-                sub_prompt = f"Suggest a real {sel} link for mood {st.session_state.mood}. FORMAT: [Natural Banter] || [YouTube Search Link]. Tone: 60/10/30. No dialogues."
+                sub_prompt = f"""
+                Suggest a real {sel} link for mood {st.session_state.mood}.
+                FORMAT: [Natural Banter] || [YouTube Search Link]
+                RULES:
+                1. START IMMEDIATELY with the banter.
+                2. Tone: 60% Funny, 10% Romantic, 30% Teasing.
+                3. NO scene names, NO dialogues, NO labels. Just banter and link.
+                4. Link: Provide a direct YouTube search URL.
+                """
                 res = model.generate_content(sub_prompt)
                 st.session_state.final_res = res.text
                 st.rerun()
 
+    # --- 4. DISPLAY RESULT ---
     if st.session_state.final_res:
         parts = st.session_state.final_res.split("||")
         if len(parts) >= 2:
