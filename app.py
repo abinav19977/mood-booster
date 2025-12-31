@@ -31,7 +31,6 @@ def main():
 
     st.markdown('<p class="big-title">✨ Hi Achu...</p>', unsafe_allow_html=True)
 
-    # State initialization
     if "mood" not in st.session_state: st.session_state.mood = None
     if "note" not in st.session_state: st.session_state.note = None
     if "show_choices" not in st.session_state: st.session_state.show_choices = False
@@ -62,7 +61,7 @@ def main():
                 Tone: 60% Fun, 20% Romantic, 20% Serious.
                 Language: 50% Manglish, 50% Simple English. Main content in English.
                 Mood: {st.session_state.mood}. Detail: {user_text}.
-                Rules: Use 'Nee/Ninakku'. No translations. Suggest Kerala remedies for pain.
+                Rules: Use 'Nee/Ninakku'. No translations.
                 """
                 res = model.generate_content(prompt)
                 st.session_state.note = res.text
@@ -92,33 +91,34 @@ def main():
         if c2.button("☕ Friends"): choice = "Friends Series"
         
         if choice:
-            with st.spinner("Finding a working video..."):
+            with st.spinner("Finding something for you..."):
                 sub_prompt = f"""
                 Suggest a {choice} scene for mood: {st.session_state.mood} and context: "{user_text}".
                 
-                MANDATORY: 
-                - You MUST provide a WORKING YouTube Video ID. 
-                - If specific scene not found, pick an evergreen high-view comedy clip (e.g. Kilukkam, CID Moosa).
-                - Format: [Scene Name] || [YouTube Video ID] || [Famous Dialogue] || [60% Fun/20% Rom/20% Ser Troll]
+                MANDATORY FORMAT: [Natural Banter] || [Scene Name] || [YouTube Link] || [Famous Dialogue]
                 
-                TROLL RULES:
-                - Malayalam Movie: Malayalam script. Friends: English.
-                - Mix the tone: 60% funny tease, 20% sweet, 20% grounded advice.
+                RULES:
+                1. Natural Banter comes FIRST: 3-4 lines mixing fun (60%), romance (20%), and serious (20%). 
+                   - NO labels like "Troll" or "Banter". Just talk to her.
+                   - If Malayalam: Use Malayalam script. If Friends: English.
+                2. YouTube: Provide ONLY the link (no embedded video player).
+                3. Address her as 'Nee'. Keep it natural.
                 """
                 res = model.generate_content(sub_prompt)
                 st.session_state.final_res = res.text
                 st.rerun()
 
-    # --- 4. DISPLAY VIDEO ---
+    # --- 4. DISPLAY RESULT ---
     if st.session_state.final_res:
         parts = st.session_state.final_res.split("||")
         if len(parts) >= 4:
             st.divider()
-            st.info(f"🎬 **For you:** {parts[0].strip()}")
-            # Direct embed for maximum stability
-            st.video(f"https://www.youtube.com/watch?v={parts[1].strip()}") 
-            st.markdown(f"**🗣️ {parts[2].strip()}**")
-            st.warning(f"😜 **Banter...**\n\n{parts[3].strip()}")
+            # 1. Natural Banter First
+            st.write(parts[0].strip())
+            # 2. Scene Info and Link
+            st.info(f"🎬 **{parts[1].strip()}**")
+            st.markdown(f"🔗 [Watch here]({parts[2].strip()})")
+            st.markdown(f"*🗣️ {parts[3].strip()}*")
 
     if st.session_state.note:
         st.write("---")
