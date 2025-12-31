@@ -76,14 +76,14 @@ def main():
             with st.spinner(""):
                 prompt = f"""
                 Act as a Mallu boyfriend. 
-                Tone: 60% Fun (teasing), 20% Casual Romantic (supportive), 20% Serious (grounded).
-                Language: 50% Manglish, 50% Simple English. Main content in English.
-                Word Count: Max 400 words.
+                Tone: 60% Funny (humor), 20% Romantic (warmth), 20% Teasing (playful).
+                Language: 50% Manglish, 50% Simple English.
+                Length: Maximum 250 words.
                 Context: Mood is {st.session_state.mood}, detail: {user_text}.
                 STRICT RULES:
-                1. NO over-romantic addresses (Avoid 'dear', 'darling', 'ponne', 'ente lokame').
-                2. Use natural addresses like 'Edooo' or 'Nee'.
-                3. Be a supportive partner. No labels or intros.
+                1. NO dramatic addresses like 'priyathame' or 'darling'. Use 'Edooo' or 'Nee'.
+                2. Mix English and Manglish naturally.
+                3. Be a supportive but funny partner. No intros.
                 """
                 res = model.generate_content(prompt)
                 st.session_state.note = res.text
@@ -109,19 +109,20 @@ def main():
         c1, c2 = st.columns(2)
         
         sel = None 
-        if c1.button("🍿 Malayalam"): sel = "Malayalam Movie Comedy Scene"
-        if c2.button("☕ Friends"): sel = "Friends Series Funny Scene"
+        if c1.button("🍿 Malayalam"): sel = "Malayalam Comedy Scene"
+        if c2.button("☕ Friends"): sel = "Friends TV Show Funny Moments"
         
         if sel:
-            with st.spinner("Finding something..."):
+            with st.spinner("Finding the perfect clip..."):
                 sub_prompt = f"""
-                You are a Mallu boyfriend. Suggest a real {sel} for mood {st.session_state.mood}.
+                Suggest a real {sel} link for mood {st.session_state.mood}.
                 FORMAT: [Natural Banter] || [YouTube Search Link]
                 RULES:
-                1. START IMMEDIATELY with the banter. 
-                2. Tone: 60% Fun, 20% Rom, 20% Ser. 
-                3. AVOID dramatic/romantic words in Malayalam script. Keep it like real-life teasing.
-                4. Link: Direct YouTube search link.
+                1. START IMMEDIATELY with the banter.
+                2. Tone: 60% Funny, 20% Romantic, 20% Teasing.
+                3. Link: Provide a direct YouTube search URL targeting the specific funny scene.
+                4. For Friends: Ensure the link is a valid search for 'Friends TV show funny scene'.
+                5. NO scene names, NO dialogues, NO labels.
                 """
                 res = model.generate_content(sub_prompt)
                 st.session_state.final_res = res.text
