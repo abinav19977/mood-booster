@@ -8,9 +8,11 @@ import io
 # --- CONFIG ---
 PAGE_LOGO = "535a00a0-0968-491d-92db-30c32ced7ac6.webp" 
 SPELL_BEE_WORDS = ["Enthusiastic", "Serendipity", "Magnanimous", "Quintessential", "Pharaoh", "Onomatopoeia", "Bourgeois", "Mischievous"]
+
+# Nicknames for Achumol
 NICKNAMES = ["Collector Achumol", "Spelling Rani", "Einstein Achu", "Budhirakshasi", "Achu-Panda", "Chakkara-Bee"]
 
-# Verified links to avoid "unavailable" errors
+# Reliable hardcoded YouTube links
 MALAYALAM_LINKS = [
     "https://www.youtube.com/watch?v=9two30yb62Q",
     "https://www.youtube.com/watch?v=h3ka9dCpN0I",
@@ -74,23 +76,22 @@ def main():
             st.session_state.mood = moods[i]
             st.session_state.note, st.session_state.final_res, st.session_state.nickname = None, None, None
             st.session_state.show_choices, st.session_state.play_spell_bee = False, False
+            st.toast(f"Oh, mood {moods[i]} aano? Shari enna!", icon=icons[i])
 
     if st.session_state.mood:
         st.divider()
         user_text = st.text_area("Enthenkilum extra parayan undo?", placeholder="Para...") 
         if st.button("🚀 Paraa"):
-            with st.spinner(""):
-                # Tone: 60% Funny, 30% Teasing, 10% Romantic. 70% English, 30% Manglish
+            with st.spinner("Thinking..."):
                 prompt = f"""
-                Write a message to my partner based on their mood: {st.session_state.mood}.
-                User input: {user_text}.
+                Write a message to my partner. Mood: {st.session_state.mood}. Input: {user_text}.
                 
-                STRICT STYLE RULES:
+                STRICT RULES:
+                - Ratio: 70% Simple English, 30% Manglish (English script).
                 - Tone: 60% Funny, 30% Teasing, 10% Romantic.
-                - Language: 70% Simple English, 30% Manglish (natural mix).
-                - Max 200 words.
-                - No drama, no cringe movie dialogues, no 'darling/honey'.
-                - Be grounded. Use 'Edo' or 'Nee'. 
+                - Vibe: Realistic daily chat between partners. 
+                - NO drama, NO cringe romance, NO 'darling/honey'. 
+                - Use 'Edo' or 'Nee'. Max 200 words.
                 """
                 res = model.generate_content(prompt)
                 st.session_state.note = res.text
@@ -103,14 +104,14 @@ def main():
         if not st.session_state.show_choices and not st.session_state.play_spell_bee:
             st.write("Mood onnu boost cheyyaan oru scene kandaalo?")
             y, n = st.columns(2)
-            if y.button("✅ Pinne enna!"):
+            if y.button("✅ Pinne entha?"):
                 st.session_state.show_choices = True
                 st.rerun()
             if n.button("❌ Venda"):
                 st.session_state.play_spell_bee = True
                 st.rerun()
 
-    # --- 3. SPELL BEE ---
+    # --- 3. SPELL BEE GAME ---
     if st.session_state.play_spell_bee:
         st.divider()
         st.subheader("🐝 Nammaku Spell Bee kalichalo?")
@@ -133,7 +134,7 @@ def main():
                     st.session_state.nickname = None
                     st.rerun()
             else:
-                st.error("Thetti! Itra paranjittum manassilaayille? 😉")
+                st.error("Thetti! Itra paranjittum manassilaayille? Tease: Spelling polum ariyille? 😉")
 
     # --- 4. VIDEO CHOICE ---
     if st.session_state.show_choices and not st.session_state.final_res:
@@ -145,10 +146,10 @@ def main():
         if c2.button("☕ Friends"): v_type = "FRIENDS"
         
         if v_type:
-            with st.spinner("Finding something..."):
+            with st.spinner("Finding..."):
                 url = random.choice(MALAYALAM_LINKS if v_type == "MALAYALAM" else FRIENDS_LINKS)
-                lang_rule = "Malayalam script" if v_type == "MALAYALAM" else "English"
-                p = f"Write exactly 2 lines of teasing banter about watching {v_type} in {lang_rule}. No labels."
+                lang = "Malayalam script" if v_type == "MALAYALAM" else "English"
+                p = f"Write 2 lines of teasing banter about watching {v_type} in {lang}. No labels."
                 banter = model.generate_content(p).text
                 st.session_state.final_res = f"{banter}||{url}"
                 st.rerun()
