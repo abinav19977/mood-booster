@@ -43,18 +43,17 @@ def main():
                 prompt = f"""
                 User mood: {st.session_state.mood}. Detail: {user_text}.
                 
-                STRICT PERSONALITY RULES:
-                1. NO INTRO: Do not say "Okay" or "Here is your request". Start IMMEDIATELY with the note.
-                2. ADDRESS: Use 'Edooo' or 'Nee'. NEVER say 'Achu'.
-                3. LANGUAGE: Use a strict 50/50 mix of Manglish and English. Mix them in every sentence. 
-                   (Example: "Edooo, why are you sitting like this? Oru smile okke itte, let's make this day better.")
-                4. ADVICE: If detail is given, give romantic/human advice to boost the mood. Use a short motivational story or a relatable current issue.
-                5. TRANSITION: End the note part with: "Mood boost cheyyan nalla oru movie scene suggest cheyyatte?"
-                6. MOVIE: Name a specific Malayalam movie and a specific scene.
-                7. YOUTUBE: Provide a specific search query that will find the EXACT scene (not a group).
-                8. TROLL: A funny Malayalam troll roasting the user based on that specific scene.
+                STRICT RULES:
+                1. START DIRECTLY: No intro like "Here is your request" or "Trolling". Start immediately with the note.
+                2. ADDRESS: Use 'Edooo' or 'Nee'. Never use 'Achu'.
+                3. LANGUAGE: Strict 50/50 mix of Manglish and English in every sentence.
+                4. ADVICE: Be romantic/human. Use a short story or current issue to boost the mood if details are provided.
+                5. TRANSITION: You MUST end the note with this exact Manglish question: "Mood boost cheyyan oru Malayalam movie scene suggest cheyyatte, atho Friends series-ile oru scene veno?"
+                6. SUGGESTION: Pick either a famous Malayalam movie scene OR a classic 'Friends' TV show scene based on the mood.
+                7. SEARCH: Provide a very specific YouTube search query for that exact scene.
+                8. TROLL: A funny Malayalam roast (troll) of the user based on that scene's context.
                 
-                Format: Note: [text] || Movie: [name] || Search: [specific search query] || Troll: [text]
+                Format: Note: [text] || Scene: [name] || Search: [query] || Troll: [text]
                 """
                 res = model.generate_content(prompt)
                 st.session_state.response = res.text
@@ -62,40 +61,34 @@ def main():
     # DISPLAY RESULTS
     if st.session_state.response:
         try:
-            # Cleanup AI chatter if it happens
             raw_text = st.session_state.response
-            if "Note:" not in raw_text and "||" not in raw_text:
-                st.error("AI is being moody. Try clicking again!")
-                st.stop()
-                
             parts = raw_text.split("||")
             
-            # 1. Clean the Note
+            # 1. Clean Note (Removes any hidden AI chatter)
             note_content = parts[0].replace("Note:", "").strip()
-            # Safety filter for unwanted intros
-            note_lines = note_content.split('\n')
-            note_content = next((line for line in note_lines if any(word in line.lower() for word in ['edooo', 'nee', 'why', 'is'])), note_content)
+            # This filter removes any line that looks like a technical description
+            lines = note_content.split('\n')
+            note_content = "\n".join([l for l in lines if not any(x in l.lower() for x in ["here is", "trolling", "restriction", "request"])])
 
             st.success("💌 **Message:**")
-            st.write(note_content)
+            st.write(note_content.strip())
             
-            # 2. Movie & Specific Link
+            # 2. Scene & Link
             if len(parts) > 2:
                 st.divider()
-                movie_name = parts[1].replace("Movie:", "").strip()
+                scene_name = parts[1].replace("Scene:", "").strip()
                 search_query = parts[2].replace("Search:", "").strip()
                 
-                st.info(f"🍿 **Suggested Movie:** {movie_name}")
-                # Added "full scene" and "Malayalam" to the search to make it more specific
-                yt_link = f"https://www.youtube.com/results?search_query={search_query.replace(' ', '+')}+Malayalam+movie+scene+official"
-                st.link_button(f"📺 Watch Specific Scene", yt_link)
+                st.info(f"🎬 **Suggested Scene:** {scene_name}")
+                yt_link = f"https://www.youtube.com/results?search_query={search_query.replace(' ', '+')}+official+scene"
+                st.link_button(f"📺 Watch This Scene", yt_link)
             
-            # 3. Troll Section
+            # 3. Fun Troll
             if len(parts) > 3:
                 st.warning("😜 **Hehe...**")
                 st.write(parts[3].replace("Troll:", "").strip())
         except:
-            st.error("Click Boost Me again for a better response!")
+            st.error("Click Boost Me again!")
 
 if __name__ == "__main__":
     main()
