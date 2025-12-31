@@ -31,7 +31,6 @@ def main():
 
     st.markdown('<p class="big-title">✨ Hi Achu...</p>', unsafe_allow_html=True)
 
-    # Initialize all session states to avoid NameError
     if "mood" not in st.session_state: st.session_state.mood = None
     if "note" not in st.session_state: st.session_state.note = None
     if "show_choices" not in st.session_state: st.session_state.show_choices = False
@@ -58,9 +57,10 @@ def main():
         if st.button("🚀 Boost Me"):
             with st.spinner(""):
                 prompt = f"""
-                Act as a Malayali boyfriend. Language: 70% Simple English, 30% Manglish.
+                Act as a caring Malayali boyfriend. 
+                Language: Use exactly 50% Manglish and 50% Simple English. Main content must be in English.
                 Mood: {st.session_state.mood}. Detail: {user_text}.
-                Rules: Chill and supportive. No drama. No translations. Use 'Nee/Ninakku'.
+                Rules: Chill and supportive. No filmy drama. No translations. Use 'Nee/Ninakku'.
                 """
                 res = model.generate_content(prompt)
                 st.session_state.note = res.text
@@ -93,15 +93,21 @@ def main():
             with st.spinner("Finding a video..."):
                 sub_prompt = f"""
                 Suggest a {choice} scene for mood: {st.session_state.mood} and context: "{user_text}".
-                STRICT RULE: You MUST provide a real YouTube Video ID. No disclaimers. 
-                Format STRICTLY: [Scene Name] || [YouTube Video ID] || [Famous Dialogue] || [Short Troll Comment]
-                If Malayalam: Troll in MALAYALAM SCRIPT. If Friends: Troll in English.
+                
+                MANDATORY RULE: 
+                - You MUST provide a real YouTube Video ID. No excuses.
+                - If no exact match exists, pick a legendary happy/funny scene.
+                - Format: [Scene Name] || [YouTube Video ID] || [Famous Dialogue] || [Short Cute Troll]
+                
+                TROLL RULES:
+                - If Malayalam: Write in Malayalam script. If Friends: English.
+                - Tone: Funny tease, not dramatic. Connect to context and scene.
                 """
                 res = model.generate_content(sub_prompt)
                 st.session_state.final_res = res.text
                 st.rerun()
 
-    # --- 4. VIDEO & TROLL (With Safety Checks) ---
+    # --- 4. DISPLAY VIDEO ---
     if st.session_state.final_res:
         parts = st.session_state.final_res.split("||")
         if len(parts) >= 4:
