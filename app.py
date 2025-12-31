@@ -10,22 +10,13 @@ PAGE_LOGO = "535a00a0-0968-491d-92db-30c32ced7ac6.webp"
 SPELL_BEE_WORDS = ["Enthusiastic", "Serendipity", "Magnanimous", "Quintessential", "Pharaoh", "Onomatopoeia", "Bourgeois", "Mischievous"]
 NICKNAMES = ["Collector Achumol", "Spelling Rani", "Einstein Achu", "Budhirakshasi", "Achu-Panda", "Chakkara-Bee"]
 
-# Reliable hardcoded YouTube links
-MALAYALAM_LINKS = [
-    "https://www.youtube.com/watch?v=9two30yb62Q",
-    "https://www.youtube.com/watch?v=h3ka9dCpN0I",
-    "https://www.youtube.com/watch?v=yS3F3gq_0zM"
-]
-FRIENDS_LINKS = [
-    "https://www.youtube.com/watch?v=xT5zt93BbAg",
-    "https://www.youtube.com/watch?v=JZ0AGtN_Uao",
-    "https://www.youtube.com/watch?v=ojTdYiBRtdU"
-]
+MALAYALAM_LINKS = ["https://www.youtube.com/watch?v=9two30yb62Q", "https://www.youtube.com/watch?v=h3ka9dCpN0I", "https://www.youtube.com/watch?v=yS3F3gq_0zM"]
+FRIENDS_LINKS = ["https://www.youtube.com/watch?v=xT5zt93BbAg", "https://www.youtube.com/watch?v=JZ0AGtN_Uao", "https://www.youtube.com/watch?v=ojTdYiBRtdU"]
 
 if "GEMINI_API_KEY" in st.secrets:
     API_KEY = st.secrets["GEMINI_API_KEY"]
 else:
-    st.error("Missing API Key! Please add it to Secrets.")
+    st.error("Missing API Key!")
     st.stop()
 
 genai.configure(api_key=API_KEY)
@@ -81,15 +72,15 @@ def main():
                 Act as a Mallu partner. Mood: {st.session_state.mood}. Input context: {user_text}.
                 
                 STRICT LANGUAGE RULES:
-                1. The message must be 70% Manglish (Malayalam written in English script) and 30% English.
-                2. The majority of the conversation (Funny and Teasing parts) MUST be in Manglish.
-                3. ONLY the romantic/warm part (10% of the note) should be in English.
+                1. Use Colloquial Manglish (how people chat on WhatsApp in Kerala).
+                2. 70% Manglish, 30% English.
+                3. ONLY the 10% romantic part should be in English.
+                4. Funny/Teasing parts MUST use slang like 'aliyo', 'scene', 'chumma', 'enthutta'.
                 
                 TONE RULES:
                 - 60% Funny, 30% Teasing, 10% Romantic.
-                - Max 200 words.
-                - No cringe drama. Use 'Edo' or 'Nee'. 
-                - Do NOT mention personal details about the user's real life.
+                - Max 200 words. No dramatic addresses. Use 'Edo' or 'Nee'.
+                - Do NOT mention personal details about the user.
                 """
                 res = model.generate_content(prompt)
                 st.session_state.note = res.text
@@ -112,7 +103,6 @@ def main():
         st.divider()
         st.subheader("🐝 Nammaku Spell Bee kalichalo?")
         if not st.session_state.current_word: st.session_state.current_word = random.choice(SPELL_BEE_WORDS)
-        
         tts = gTTS(text=st.session_state.current_word, lang='en')
         audio_fp = io.BytesIO()
         tts.write_to_fp(audio_fp)
@@ -130,7 +120,7 @@ def main():
                     st.session_state.nickname = None
                     st.rerun()
             else:
-                st.error("Thetti! Itra paranjittum manassilaayille? 😉")
+                st.error("Thetti! Pinne ninnodu parayunnathil entha karyam? 😉")
 
     if st.session_state.show_choices and not st.session_state.final_res:
         st.divider()
