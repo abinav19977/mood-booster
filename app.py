@@ -79,11 +79,7 @@ def main():
 
         if st.button("🚀 Paraa"):
             with st.spinner(""):
-                prompt = f"""
-                Act as a Mallu boyfriend. Tone: 60% Funny, 10% Warm, 30% Teasing.
-                Lang: 50% Manglish/English. Max 250 words. Mood: {st.session_state.mood}, Detail: {user_text}. 
-                Use 'Edooo/Nee'. No filmy malayalam.
-                """
+                prompt = f"Act as a Mallu boyfriend. Tone: 60% Funny, 10% Warm, 30% Teasing. Lang: 50% Manglish/English. Max 250 words. Mood: {st.session_state.mood}, Detail: {user_text}. Use 'Edooo/Nee'. No filmy malayalam."
                 res = model.generate_content(prompt)
                 st.session_state.note = res.text
 
@@ -118,7 +114,7 @@ def main():
             st.audio(audio_fp, format='audio/mp3')
             st.caption("Click play to hear the word.")
         except:
-            st.error("Audio failed. Try again!")
+            st.error("Audio error. Try again!")
 
         guess = st.text_input("Type the spelling here:", key="spell_input").strip()
         if st.button("Check Spelling"):
