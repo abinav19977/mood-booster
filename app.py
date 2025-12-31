@@ -59,8 +59,12 @@ def main():
                 prompt = f"""
                 Act as a Malayali boyfriend. Language: 70% Simple English, 30% Manglish.
                 Mood: {st.session_state.mood}. Detail: {user_text}.
-                Rules: Be chill, caring, and human. No drama. No translations. Use 'Nee/Ninakku'.
-                Suggest Kerala home remedies if she has a physical problem. 
+                
+                STRICT RULES:
+                1. KEEP IT CHILL: Don't be over-romantic or dramatic. Be a supportive friend/partner.
+                2. NO TRANSLATIONS: Just write the Manglish words naturally.
+                3. PERSONA: Use 'Nee/Ninakku'. If she has a problem, suggest a simple Kerala remedy.
+                4. LENGTH: Keep the note natural and realistic.
                 """
                 res = model.generate_content(prompt)
                 st.session_state.note = res.text
@@ -90,28 +94,21 @@ def main():
         if c2.button("☕ Friends"): choice = "Friends Series"
         
         if choice:
-            with st.spinner("Finding a video..."):
+            with st.spinner(""):
                 sub_prompt = f"""
                 Suggest a {choice} scene for mood: {st.session_state.mood} and context: "{user_text}".
                 
-                MANDATORY RULE: 
-                - You MUST provide a real YouTube Video ID. 
-                - If no exact match for "{user_text}" exists, pick a famous scene with similar energy.
-                - NO text-only replies or excuses.
-                
-                Format STRICTLY: [Scene Name] || [YouTube Video ID] || [Famous Dialogue] || [Cute Troll Comment]
-                
-                TROLL RULES: 
-                - Make it a cute, funny boyfriend-style roast. 
-                - Connect it to her mood/context AND the movie scene.
-                - If Malayalam Movie: Write in MALAYALAM SCRIPT (മലയാളം).
-                - If Friends: Write in English.
-                - Max 3-4 lines.
+                RULES:
+                1. ALWAYS provide a real YouTube Video ID. Pivot to similar vibes if no exact match.
+                2. FORMAT: [Scene Name] || [YouTube Video ID] || [Famous Dialogue] || [Cute/Funny Troll]
+                3. TROLL TONE: Make it a fun, light-hearted tease. NOT overly romantic.
+                4. LANGUAGE: If Malayalam Movie, troll in MALAYALAM SCRIPT (മലയാളം). If Friends, English.
+                5. Connect it to her context/mood naturally.
                 """
                 res = model.generate_content(sub_prompt)
                 st.session_state.final_res = res.text
 
-    # --- 4. VIDEO & CUTE TROLL ---
+    # --- 4. VIDEO & TROLL ---
     if st.session_state.final_res:
         parts = st.session_state.final_res.split("||")
         if len(parts) >= 4:
@@ -119,7 +116,7 @@ def main():
             st.info(f"🎬 **For you:** {parts[0].strip()}")
             st.video(f"https://www.youtube.com/watch?v={parts[1].strip()}") 
             st.markdown(f"**🗣️ {parts[2].strip()}**")
-            # This is the cute troll section
+            # Cute troll without the extra romance
             st.warning(f"😜 **Hehe...**\n\n{parts[3].strip()}")
 
     if st.session_state.note:
