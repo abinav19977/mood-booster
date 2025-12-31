@@ -14,7 +14,6 @@ model = genai.GenerativeModel('gemini-2.0-flash')
 def main():
     st.set_page_config(page_title="Hi Achu", page_icon="❤️")
     
-    # Custom Styling for the Big Logo
     st.markdown("""
         <style>
         #MainMenu {visibility: hidden;}
@@ -32,7 +31,7 @@ def main():
 
     st.markdown('<p class="big-title">✨ Hi Achu...</p>', unsafe_allow_html=True)
 
-    # 1. Initialize session states properly to avoid NameErrors
+    # Initialize session states
     if "mood" not in st.session_state: st.session_state.mood = None
     if "note" not in st.session_state: st.session_state.note = None
     if "show_choices" not in st.session_state: st.session_state.show_choices = False
@@ -59,11 +58,11 @@ def main():
         if st.button("🚀 Boost Me"):
             with st.spinner(""):
                 prompt = f"""
-                Act as a caring Malayali boyfriend. 
+                Act as a Mallu boyfriend. 
                 Tone: 60% Fun, 20% Romantic, 20% Serious.
-                Language: 50% Manglish, 50% Simple English. Main content in English.
-                Mood: {st.session_state.mood}. Detail: {user_text}.
-                Rules: Use 'Nee/Ninakku'. No translations.
+                Language: 40% Manglish, 60% Simple English. Main content in English.
+                Context: Mood is {st.session_state.mood}, detail: {user_text}.
+                Instructions: Be a human, not an AI. Use 'Nee/Ninakku'. No translations.
                 """
                 res = model.generate_content(prompt)
                 st.session_state.note = res.text
@@ -88,21 +87,22 @@ def main():
         st.write("Pick your vibe:")
         c1, c2 = st.columns(2)
         
-        # We use a localized variable here to avoid top-level NameErrors
-        current_selection = None 
-        if c1.button("🍿 Malayalam"): current_selection = "Malayalam Movie"
-        if c2.button("☕ Friends"): current_selection = "Friends Series"
+        sel = None 
+        if c1.button("🍿 Malayalam"): sel = "Malayalam Movie Comedy Scene"
+        if c2.button("☕ Friends"): sel = "Friends Series Funny Scene"
         
-        if current_selection:
-            with st.spinner("Finding something for you..."):
+        if sel:
+            with st.spinner("Finding something real..."):
                 sub_prompt = f"""
-                Suggest a {current_selection} scene for mood: {st.session_state.mood} and context: "{user_text}".
-                MANDATORY FORMAT: [Natural Banter] || [Scene Name] || [YouTube Link] || [Famous Dialogue]
-                RULES:
-                1. Banter First: 3-4 lines (60% fun, 20% romantic, 20% serious). 
-                2. No labels like "Troll" or "Banter".
-                3. If Malayalam: Banter in Malayalam script. If Friends: English.
-                4. Link: Provide a direct URL link only. No embeds.
+                You are a Mallu boyfriend. Suggest a real {sel} for mood {st.session_state.mood}.
+                STRICT RULES:
+                1. DO NOT say "Here is a suggestion" or "Okay". START IMMEDIATELY with the banter.
+                2. BANTER: 3-4 lines based on the MOVIE SCENE and HER CONTEXT. 
+                   - If Malayalam: Write in Malayalam script. If Friends: English.
+                   - Tone: 60% Fun, 20% Romantic, 20% Serious.
+                3. LINK: Provide a REAL YouTube search link based on the scene name.
+                4. FORMAT: [Banter Text] || [Scene Name] || [Search Link] || [Real Dialogue from Scene]
+                Example: [Banter] || Premam Celebration || https://www.youtube.com/results?search_query=premam+comedy+scene || [Dialogue]
                 """
                 res = model.generate_content(sub_prompt)
                 st.session_state.final_res = res.text
@@ -113,11 +113,11 @@ def main():
         parts = st.session_state.final_res.split("||")
         if len(parts) >= 4:
             st.divider()
-            # 1. Natural Banter First
+            # 1. Direct Banter (No "For you" or "Okay")
             st.write(parts[0].strip())
-            # 2. Scene Info and Direct Link
+            # 2. Scene Details
             st.info(f"🎬 **{parts[1].strip()}**")
-            st.markdown(f"🔗 **[Watch here]({parts[2].strip()})**")
+            st.markdown(f"🔗 [Watch on YouTube]({parts[2].strip()})")
             st.markdown(f"*🗣️ {parts[3].strip()}*")
 
     if st.session_state.note:
