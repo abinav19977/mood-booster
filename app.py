@@ -72,13 +72,13 @@ def main():
                 Act as a Mallu partner. Mood: {st.session_state.mood}. Input context: {user_text}.
                 
                 STRICT LANGUAGE RULES:
-                1. Use Colloquial Manglish (how people chat on WhatsApp in Kerala).
-                2. 70% Manglish, 30% English.
-                3. ONLY the 10% romantic part should be in English.
-                4. Funny/Teasing parts MUST use slang like 'aliyo', 'scene', 'chumma', 'enthutta'.
+                1. Dominantly English (80-90%).
+                2. Use small parts/phrases in Manglish (10-20%) to keep it feeling like a Malayali conversation.
+                3. Ensure there is at least one clear Manglish line.
                 
                 TONE RULES:
                 - 60% Funny, 30% Teasing, 10% Romantic.
+                - Only the romantic part should be pure English.
                 - Max 200 words. No dramatic addresses. Use 'Edo' or 'Nee'.
                 - Do NOT mention personal details about the user.
                 """
@@ -90,7 +90,7 @@ def main():
         st.write(st.session_state.note)
         
         if not st.session_state.show_choices and not st.session_state.play_spell_bee:
-            st.write("Mood onnu boost cheyyaan oru scene kandaalo?")
+            st.write("Mood onnu boost cheyyaan oru movie scene kandaalo?")
             y, n = st.columns(2)
             if y.button("✅ Pinne entha?"):
                 st.session_state.show_choices = True
