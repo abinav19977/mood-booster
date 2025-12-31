@@ -1,9 +1,10 @@
 import streamlit as st
 import google.generativeai as genai
+import os
 
 # --- CONFIG ---
-# Since the file is in the same repo folder, we just use the filename
-PAGE_LOGO = "35a00a0-0968-491d-92db-30c32ced7ac6.webp" 
+# Updated to match the path provided in your message
+PAGE_LOGO = "535a00a0-0968-491d-92db-30c32ced7ac6.webp" 
 
 if "GEMINI_API_KEY" in st.secrets:
     API_KEY = st.secrets["GEMINI_API_KEY"]
@@ -15,8 +16,13 @@ genai.configure(api_key=API_KEY)
 model = genai.GenerativeModel('gemini-2.0-flash')
 
 def main():
-    # Setting the local webp file as the page icon
-    st.set_page_config(page_title="Achumol is...", page_icon=PAGE_LOGO)
+    # Safety Check for Image
+    image_exists = os.path.exists(PAGE_LOGO)
+    
+    st.set_page_config(
+        page_title="Achumol is...", 
+        page_icon=PAGE_LOGO if image_exists else "🐘"
+    )
     
     st.markdown("""
         <style>
@@ -37,8 +43,10 @@ def main():
     # --- BRAND HEADER ---
     head_col1, head_col2 = st.columns([1, 4])
     with head_col1:
-        # Displaying your local image file
-        st.image(PAGE_LOGO, width=90) 
+        if image_exists:
+            st.image(PAGE_LOGO, width=90)
+        else:
+            st.warning("📸 Image missing")
     with head_col2:
         st.markdown('<p class="big-title">Achumol is...</p>', unsafe_allow_html=True)
 
@@ -73,7 +81,7 @@ def main():
                 Tone: 60% Fun, 20% Romantic, 20% Serious.
                 Language: 50% Manglish, 50% Simple English. Main content in English.
                 Context: Mood is {st.session_state.mood}, detail: {user_text}.
-                Instructions: Be a human. Use 'Nee/Ninakku'. No labels or intros.
+                Instructions: Be a human. Use 'Nee/Ninakku'. 50/50 mix.
                 """
                 res = model.generate_content(prompt)
                 st.session_state.note = res.text
@@ -109,7 +117,7 @@ def main():
                 FORMAT: [Natural Banter] || [Scene Name] || [Search Link] || [Real Dialogue]
                 RULES:
                 1. START IMMEDIATELY with the banter (60% Fun, 20% Rom, 20% Ser). 
-                2. Use Malayalam script for Malayalam movies. English for Friends.
+                2. If Malayalam: Malayalam script. If Friends: English.
                 3. Link: Provide a direct YouTube search link.
                 """
                 res = model.generate_content(sub_prompt)
