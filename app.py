@@ -31,6 +31,7 @@ def main():
 
     st.markdown('<p class="big-title">✨ Hi Achu...</p>', unsafe_allow_html=True)
 
+    # State initialization
     if "mood" not in st.session_state: st.session_state.mood = None
     if "note" not in st.session_state: st.session_state.note = None
     if "show_choices" not in st.session_state: st.session_state.show_choices = False
@@ -58,9 +59,10 @@ def main():
             with st.spinner(""):
                 prompt = f"""
                 Act as a caring Malayali boyfriend. 
-                Language: Use exactly 50% Manglish and 50% Simple English. Main content must be in English.
+                Tone: 60% Fun, 20% Romantic, 20% Serious.
+                Language: 50% Manglish, 50% Simple English. Main content in English.
                 Mood: {st.session_state.mood}. Detail: {user_text}.
-                Rules: Chill and supportive. No filmy drama. No translations. Use 'Nee/Ninakku'.
+                Rules: Use 'Nee/Ninakku'. No translations. Suggest Kerala remedies for pain.
                 """
                 res = model.generate_content(prompt)
                 st.session_state.note = res.text
@@ -90,18 +92,18 @@ def main():
         if c2.button("☕ Friends"): choice = "Friends Series"
         
         if choice:
-            with st.spinner("Finding a video..."):
+            with st.spinner("Finding a working video..."):
                 sub_prompt = f"""
                 Suggest a {choice} scene for mood: {st.session_state.mood} and context: "{user_text}".
                 
-                MANDATORY RULE: 
-                - You MUST provide a real YouTube Video ID. No excuses.
-                - If no exact match exists, pick a legendary happy/funny scene.
-                - Format: [Scene Name] || [YouTube Video ID] || [Famous Dialogue] || [Short Cute Troll]
+                MANDATORY: 
+                - You MUST provide a WORKING YouTube Video ID. 
+                - If specific scene not found, pick an evergreen high-view comedy clip (e.g. Kilukkam, CID Moosa).
+                - Format: [Scene Name] || [YouTube Video ID] || [Famous Dialogue] || [60% Fun/20% Rom/20% Ser Troll]
                 
                 TROLL RULES:
-                - If Malayalam: Write in Malayalam script. If Friends: English.
-                - Tone: Funny tease, not dramatic. Connect to context and scene.
+                - Malayalam Movie: Malayalam script. Friends: English.
+                - Mix the tone: 60% funny tease, 20% sweet, 20% grounded advice.
                 """
                 res = model.generate_content(sub_prompt)
                 st.session_state.final_res = res.text
@@ -113,9 +115,10 @@ def main():
         if len(parts) >= 4:
             st.divider()
             st.info(f"🎬 **For you:** {parts[0].strip()}")
+            # Direct embed for maximum stability
             st.video(f"https://www.youtube.com/watch?v={parts[1].strip()}") 
             st.markdown(f"**🗣️ {parts[2].strip()}**")
-            st.warning(f"😜 **Hehe...**\n\n{parts[3].strip()}")
+            st.warning(f"😜 **Banter...**\n\n{parts[3].strip()}")
 
     if st.session_state.note:
         st.write("---")
