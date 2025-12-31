@@ -20,11 +20,11 @@ def main():
         #MainMenu {visibility: hidden;}
         footer {visibility: hidden;}
         header {visibility: hidden;}
-        /* Making the Title/Logo bigger */
         .big-title {
             font-size: 50px !important;
             font-weight: 700;
             margin-bottom: 20px;
+            color: #FF4B4B;
         }
         .stButton>button {width: 100%; border-radius: 10px; height: 3em;}
         </style>
@@ -59,17 +59,18 @@ def main():
 
         if st.button("🚀 Boost Me"):
             with st.spinner(""):
-                # Persona: Boyfriend conversation, focus on 'Nee/Ninakku'
+                # Dynamic Persona: Boyfriend who adjusts based on context
                 prompt = f"""
-                Act as a Malayali boyfriend. 
-                Language: 60% English, 40% Manglish. 
-                Mood: {st.session_state.mood}. Detail: {user_text}.
+                Act as a caring Malayali boyfriend. 
+                Language: 70% Simple English, 30% Manglish (natural words like 'alle', 'pavam', 'shariyakum').
+                Mood: {st.session_state.mood}. User Context: {user_text}.
                 
-                Rules:
-                1. Short, direct, human chat. NO repeating back what she said.
-                2. Perspective: Use 'Nee', 'Ninakku', or 'You'. 
-                3. Content: If she has a physical issue (bite, pain), suggest a quick Kerala remedy (choonnamu, pacha manjal, etc).
-                4. Tone: Slightly romantic and caring. 2 sentences max.
+                Guidelines:
+                1. Analyze the situation: If she is in pain or sad, give a detailed, caring response. If it's a minor thing, be chill.
+                2. Perspective: Strictly use 'Nee', 'Ninakku', or 'You'. 
+                3. Advice: If she mentions a physical problem, suggest a Kerala home remedy in a sweet way.
+                4. Tone: Not robotic. Talk like a human boyfriend. Don't repeat her words back to her.
+                5. Emojis: Use hearts and supportive emojis.
                 """
                 res = model.generate_content(prompt)
                 st.session_state.note = res.text
@@ -99,10 +100,10 @@ def main():
         if c2.button("☕ Friends"): choice = "Friends Series"
         
         if choice:
-            with st.spinner(""):
+            with st.spinner("Finding the perfect scene..."):
                 sub_prompt = f"""
                 Suggest a {choice} scene for mood {st.session_state.mood} and context "{user_text}".
-                Format STRICTLY: [Scene Name] || [YouTube Video ID] || [Famous Dialogue] || [Short natural funny comment addressing 'Nee']
+                Format STRICTLY: [Scene Name] || [YouTube Video ID] || [Famous Dialogue] || [A natural funny comment in Manglish/English addressing 'Nee']
                 """
                 res = model.generate_content(sub_prompt)
                 st.session_state.final_res = res.text
