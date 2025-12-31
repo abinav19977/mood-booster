@@ -2,6 +2,9 @@ import streamlit as st
 import google.generativeai as genai
 
 # --- CONFIG ---
+# Since the file is in the same repo folder, we just use the filename
+PAGE_LOGO = "35a00a0-0968-491d-92db-30c32ced7ac6.webp" 
+
 if "GEMINI_API_KEY" in st.secrets:
     API_KEY = st.secrets["GEMINI_API_KEY"]
 else:
@@ -12,7 +15,8 @@ genai.configure(api_key=API_KEY)
 model = genai.GenerativeModel('gemini-2.0-flash')
 
 def main():
-    st.set_page_config(page_title="Hi Achu", page_icon="❤️")
+    # Setting the local webp file as the page icon
+    st.set_page_config(page_title="Achumol is...", page_icon=PAGE_LOGO)
     
     st.markdown("""
         <style>
@@ -22,14 +26,21 @@ def main():
         .big-title {
             font-size: 50px !important;
             font-weight: 700;
-            margin-bottom: 20px;
             color: #FF4B4B;
+            margin: 0;
+            line-height: 1.2;
         }
         .stButton>button {width: 100%; border-radius: 10px; height: 3em;}
         </style>
         """, unsafe_allow_html=True)
 
-    st.markdown('<p class="big-title">✨ Hi Achu...</p>', unsafe_allow_html=True)
+    # --- BRAND HEADER ---
+    head_col1, head_col2 = st.columns([1, 4])
+    with head_col1:
+        # Displaying your local image file
+        st.image(PAGE_LOGO, width=90) 
+    with head_col2:
+        st.markdown('<p class="big-title">Achumol is...</p>', unsafe_allow_html=True)
 
     # Initialize session states
     if "mood" not in st.session_state: st.session_state.mood = None
@@ -37,7 +48,7 @@ def main():
     if "show_choices" not in st.session_state: st.session_state.show_choices = False
     if "final_res" not in st.session_state: st.session_state.final_res = None
 
-    # --- MOOD SELECTION ---
+    # --- 1. MOOD SELECTION ---
     st.write("Edooo, Mood engane undu?")
     cols = st.columns(4)
     moods = ["Happy", "Neutral", "Sad", "Angry"]
@@ -60,14 +71,14 @@ def main():
                 prompt = f"""
                 Act as a Mallu boyfriend. 
                 Tone: 60% Fun, 20% Romantic, 20% Serious.
-                Language: 40% Manglish, 60% Simple English. Main content in English.
+                Language: 50% Manglish, 50% Simple English. Main content in English.
                 Context: Mood is {st.session_state.mood}, detail: {user_text}.
-                Instructions: Be a human, not an AI. Use 'Nee/Ninakku'. No translations.
+                Instructions: Be a human. Use 'Nee/Ninakku'. No labels or intros.
                 """
                 res = model.generate_content(prompt)
                 st.session_state.note = res.text
 
-    # --- THE NOTE ---
+    # --- 2. THE NOTE ---
     if st.session_state.note:
         st.success("💌 **Message:**")
         st.write(st.session_state.note)
@@ -81,7 +92,7 @@ def main():
             if n.button("❌ No"):
                 st.info("Okay Edooo, take care! ❤️")
 
-    # --- MOVIE CHOICE ---
+    # --- 3. MOVIE CHOICE ---
     if st.session_state.show_choices and not st.session_state.final_res:
         st.divider()
         st.write("Pick your vibe:")
@@ -92,30 +103,25 @@ def main():
         if c2.button("☕ Friends"): sel = "Friends Series Funny Scene"
         
         if sel:
-            with st.spinner("Finding something real..."):
+            with st.spinner("Finding something..."):
                 sub_prompt = f"""
                 You are a Mallu boyfriend. Suggest a real {sel} for mood {st.session_state.mood}.
-                STRICT RULES:
-                1. DO NOT say "Here is a suggestion" or "Okay". START IMMEDIATELY with the banter.
-                2. BANTER: 3-4 lines based on the MOVIE SCENE and HER CONTEXT. 
-                   - If Malayalam: Write in Malayalam script. If Friends: English.
-                   - Tone: 60% Fun, 20% Romantic, 20% Serious.
-                3. LINK: Provide a REAL YouTube search link based on the scene name.
-                4. FORMAT: [Banter Text] || [Scene Name] || [Search Link] || [Real Dialogue from Scene]
-                Example: [Banter] || Premam Celebration || https://www.youtube.com/results?search_query=premam+comedy+scene || [Dialogue]
+                FORMAT: [Natural Banter] || [Scene Name] || [Search Link] || [Real Dialogue]
+                RULES:
+                1. START IMMEDIATELY with the banter (60% Fun, 20% Rom, 20% Ser). 
+                2. Use Malayalam script for Malayalam movies. English for Friends.
+                3. Link: Provide a direct YouTube search link.
                 """
                 res = model.generate_content(sub_prompt)
                 st.session_state.final_res = res.text
                 st.rerun()
 
-    # --- DISPLAY RESULT ---
+    # --- 4. DISPLAY RESULT ---
     if st.session_state.final_res:
         parts = st.session_state.final_res.split("||")
         if len(parts) >= 4:
             st.divider()
-            # 1. Direct Banter (No "For you" or "Okay")
             st.write(parts[0].strip())
-            # 2. Scene Details
             st.info(f"🎬 **{parts[1].strip()}**")
             st.markdown(f"🔗 [Watch on YouTube]({parts[2].strip()})")
             st.markdown(f"*🗣️ {parts[3].strip()}*")
