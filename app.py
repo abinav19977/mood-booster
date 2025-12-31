@@ -14,7 +14,7 @@ model = genai.GenerativeModel('gemini-2.0-flash')
 def main():
     st.set_page_config(page_title="Hi Achu", page_icon="❤️")
     
-    # CSS for Big Logo (Title), clean UI, and button styling
+    # CSS for Big Logo, Clean UI, and Styling
     st.markdown("""
         <style>
         #MainMenu {visibility: hidden;}
@@ -30,7 +30,6 @@ def main():
         </style>
         """, unsafe_allow_html=True)
 
-    # Big Logo/Title
     st.markdown('<p class="big-title">✨ Hi Achu...</p>', unsafe_allow_html=True)
 
     # Session State management
@@ -59,18 +58,18 @@ def main():
 
         if st.button("🚀 Boost Me"):
             with st.spinner(""):
-                # Dynamic Persona: Boyfriend who adjusts based on context
+                # Persona: Chill Malayali Boyfriend
                 prompt = f"""
-                Act as a caring Malayali boyfriend. 
-                Language: 70% Simple English, 30% Manglish (natural words like 'alle', 'pavam', 'shariyakum').
-                Mood: {st.session_state.mood}. User Context: {user_text}.
+                Act as a Malayali boyfriend. 
+                Language: Simple English mixed with natural Manglish.
+                Mood: {st.session_state.mood}. Detail: {user_text}.
                 
-                Guidelines:
-                1. Analyze the situation: If she is in pain or sad, give a detailed, caring response. If it's a minor thing, be chill.
-                2. Perspective: Strictly use 'Nee', 'Ninakku', or 'You'. 
-                3. Advice: If she mentions a physical problem, suggest a Kerala home remedy in a sweet way.
-                4. Tone: Not robotic. Talk like a human boyfriend. Don't repeat her words back to her.
-                5. Emojis: Use hearts and supportive emojis.
+                STRICT RULES:
+                1. DO NOT be over-dramatic or "filmy" romantic. Keep it chill and caring.
+                2. DO NOT provide English translations for Manglish words.
+                3. Perspective: Use 'Nee', 'Ninakku', or 'You'. 
+                4. Content: If she mentions a physical problem (bite, headache), suggest a quick Kerala remedy (choonnamu, pacha manjal, etc).
+                5. Response should feel like a human chat message. 
                 """
                 res = model.generate_content(prompt)
                 st.session_state.note = res.text
@@ -100,10 +99,10 @@ def main():
         if c2.button("☕ Friends"): choice = "Friends Series"
         
         if choice:
-            with st.spinner("Finding the perfect scene..."):
+            with st.spinner(""):
                 sub_prompt = f"""
                 Suggest a {choice} scene for mood {st.session_state.mood} and context "{user_text}".
-                Format STRICTLY: [Scene Name] || [YouTube Video ID] || [Famous Dialogue] || [A natural funny comment in Manglish/English addressing 'Nee']
+                Format STRICTLY: [Scene Name] || [YouTube Video ID] || [Famous Dialogue] || [Short natural funny comment addressing 'Nee']
                 """
                 res = model.generate_content(sub_prompt)
                 st.session_state.final_res = res.text
