@@ -14,7 +14,6 @@ model = genai.GenerativeModel('gemini-2.0-flash')
 def main():
     st.set_page_config(page_title="Hi Achu", page_icon="❤️")
     
-    # CSS for Big Logo, Clean UI, and Styling
     st.markdown("""
         <style>
         #MainMenu {visibility: hidden;}
@@ -32,11 +31,11 @@ def main():
 
     st.markdown('<p class="big-title">✨ Hi Achu...</p>', unsafe_allow_html=True)
 
-    # Session State management
     if "mood" not in st.session_state: st.session_state.mood = None
     if "note" not in st.session_state: st.session_state.note = None
     if "show_choices" not in st.session_state: st.session_state.show_choices = False
     if "final_res" not in st.session_state: st.session_state.final_res = None
+    if "choice_type" not in st.session_state: st.session_state.choice_type = None
 
     # --- 1. MOOD SELECTION ---
     st.write("Edooo, Mood engane undu?")
@@ -58,23 +57,16 @@ def main():
 
         if st.button("🚀 Boost Me"):
             with st.spinner(""):
-                # Persona: Chill Malayali Boyfriend
                 prompt = f"""
-                Act as a Malayali boyfriend. 
-                Language: Simple English mixed with natural Manglish.
+                Act as a Malayali boyfriend. Language: Simple English mixed with natural Manglish.
                 Mood: {st.session_state.mood}. Detail: {user_text}.
-                
-                STRICT RULES:
-                1. DO NOT be over-dramatic or "filmy" romantic. Keep it chill and caring.
-                2. DO NOT provide English translations for Manglish words.
-                3. Perspective: Use 'Nee', 'Ninakku', or 'You'. 
-                4. Content: If she mentions a physical problem (bite, headache), suggest a quick Kerala remedy (choonnamu, pacha manjal, etc).
-                5. Response should feel like a human chat message. 
+                Rules: Be chill and caring. No drama. No translations. Use 'Nee/Ninakku'.
+                Suggest Kerala remedies if she mentions a physical problem.
                 """
                 res = model.generate_content(prompt)
                 st.session_state.note = res.text
 
-    # --- 2. THE NOTE & CHOICE ---
+    # --- 2. NOTE & CHOICE ---
     if st.session_state.note:
         st.success("💌 **Message:**")
         st.write(st.session_state.note)
@@ -99,10 +91,18 @@ def main():
         if c2.button("☕ Friends"): choice = "Friends Series"
         
         if choice:
-            with st.spinner(""):
+            st.session_state.choice_type = choice
+            with st.spinner("Finding a scene..."):
                 sub_prompt = f"""
-                Suggest a {choice} scene for mood {st.session_state.mood} and context "{user_text}".
-                Format STRICTLY: [Scene Name] || [YouTube Video ID] || [Famous Dialogue] || [Short natural funny comment addressing 'Nee']
+                Suggest a {choice} scene that matches the vibe of mood: {st.session_state.mood} and context: "{user_text}".
+                If no exact match, pick a famous funny/happy scene.
+                Format STRICTLY: [Scene Name] || [YouTube Video ID] || [Famous Dialogue] || [Troll Comment]
+                
+                RULES for Troll Comment:
+                1. Max 4-5 lines.
+                2. If Malayalam Movie was picked: Write the troll in MALAYALAM SCRIPT (മലയാളം).
+                3. If Friends was picked: Write the troll in NATURAL ENGLISH.
+                4. Connect it to her situation naturally.
                 """
                 res = model.generate_content(sub_prompt)
                 st.session_state.final_res = res.text
