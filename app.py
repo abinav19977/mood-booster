@@ -13,7 +13,9 @@ model = genai.GenerativeModel('gemini-2.0-flash')
 
 def main():
     st.set_page_config(page_title="Hi Achu", page_icon="❤️")
-    st.markdown("""<style>#MainMenu {visibility: hidden;} footer {visibility: hidden;}</style>""", unsafe_allow_html=True)
+    
+    # Hide all technical streamlit labels
+    st.markdown("""<style>#MainMenu {visibility: hidden;} footer {visibility: hidden;} header {visibility: hidden;}</style>""", unsafe_allow_html=True)
 
     st.title("✨ Hi Achu...")
 
@@ -33,27 +35,32 @@ def main():
 
     if st.session_state.mood:
         st.divider()
-        elab = st.toggle("Edooo, Koodothal enthenkilum parayanundo?")
+        
+        # Edooo moved to the start of the toggle
+        elab = st.toggle("Edooo, Kooduthal enthelum parayanundo?")
         user_text = ""
         if elab:
-            user_text = st.text_area("Para...", placeholder="Share what's on your mind...")
+            user_text = st.text_area("Para...", placeholder="Share what's on your mind, I'm listening...")
 
         if st.button("🚀 Boost Me"):
-            with st.spinner("Connecting..."):
+            # Empty spinner to hide "trolling in progress" text
+            with st.spinner(""):
                 prompt = f"""
-                User mood: {st.session_state.mood}. Detail: {user_text}.
+                Context: The user is my girlfriend. 
+                Her current mood: {st.session_state.mood}. 
+                Details she shared: {user_text if user_text else 'None'}.
                 
                 STRICT RULES:
-                1. START DIRECTLY: No intro like "Here is your request" or "Trolling". Start immediately with the note.
-                2. ADDRESS: Use 'Edooo' or 'Nee'. Never use 'Achu'.
-                3. LANGUAGE: Strict 50/50 mix of Manglish and English in every sentence.
-                4. ADVICE: Be romantic/human. Use a short story or current issue to boost the mood if details are provided.
-                5. TRANSITION: You MUST end the note with this exact Manglish question: "Mood boost cheyyan oru Malayalam movie scene suggest cheyyatte, atho Friends series-ile oru scene veno?"
-                6. SUGGESTION: Pick either a famous Malayalam movie scene OR a classic 'Friends' TV show scene based on the mood.
-                7. SEARCH: Provide a very specific YouTube search query for that exact scene.
-                8. TROLL: A funny Malayalam roast (troll) of the user based on that scene's context.
+                1. START DIRECTLY: Do not show any AI technical intros or "Here is your request."
+                2. LANGUAGE RATIO: 60% proper English + 40% Manglish. 
+                3. TONE: Romantic, deeply caring, and genuinely supportive. Not robotic.
+                4. ADVICE CONTENT: Give thoughtful advice. Include a very short motivational story, a real-life example, or a famous quote (like Rumi, Marcus Aurelius, or Maya Angelou) that fits her specific situation to lift her up.
+                5. TRANSITION: After the note, you MUST ask: "Edooo, mood boost cheyyan oru Malayalam movie scene suggest cheyyatte, atho Friends series-ile oru clip veno?"
+                6. SELECTION: Based on her situation, pick ONE specific Malayalam movie scene OR ONE specific 'Friends' scene.
+                7. SEARCH: Provide a specific YouTube search query for the exact video scene.
+                8. TROLL: End with a funny Malayalam troll or a classic dialogue from that scene that playfully roasts her or her current situation.
                 
-                Format: Note: [text] || Scene: [name] || Search: [query] || Troll: [text]
+                Format: Note: [text] || Choice: [name] || Search: [query] || Troll: [text]
                 """
                 res = model.generate_content(prompt)
                 st.session_state.response = res.text
@@ -61,29 +68,28 @@ def main():
     # DISPLAY RESULTS
     if st.session_state.response:
         try:
-            raw_text = st.session_state.response
-            parts = raw_text.split("||")
+            parts = st.session_state.response.split("||")
             
-            # 1. Clean Note (Removes any hidden AI chatter)
+            # Message Section (Filters technical chatter)
             note_content = parts[0].replace("Note:", "").strip()
-            # This filter removes any line that looks like a technical description
-            lines = note_content.split('\n')
-            note_content = "\n".join([l for l in lines if not any(x in l.lower() for x in ["here is", "trolling", "restriction", "request"])])
+            # Emergency filter to remove any "Okay" or "Here's the result" starting lines
+            if note_content.lower().startswith("okay") or note_content.lower().startswith("here"):
+                 note_content = "\n".join(note_content.split("\n")[1:])
 
             st.success("💌 **Message:**")
-            st.write(note_content.strip())
+            st.write(note_content)
             
-            # 2. Scene & Link
+            # Scene Section
             if len(parts) > 2:
                 st.divider()
-                scene_name = parts[1].replace("Scene:", "").strip()
+                scene_name = parts[1].replace("Choice:", "").strip()
                 search_query = parts[2].replace("Search:", "").strip()
                 
-                st.info(f"🎬 **Suggested Scene:** {scene_name}")
+                st.info(f"🎬 **For you:** {scene_name}")
                 yt_link = f"https://www.youtube.com/results?search_query={search_query.replace(' ', '+')}+official+scene"
-                st.link_button(f"📺 Watch This Scene", yt_link)
+                st.link_button(f"📺 Watch Now", yt_link)
             
-            # 3. Fun Troll
+            # Troll Section
             if len(parts) > 3:
                 st.warning("😜 **Hehe...**")
                 st.write(parts[3].replace("Troll:", "").strip())
