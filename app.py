@@ -6,7 +6,7 @@ import random
 import io
 
 # --- CONFIG ---
-PAGE_LOGO = "35a00a0-0968-491d-92db-30c32ced7ac6.webp" 
+PAGE_LOGO = "535a00a0-0968-491d-92db-30c32ced7ac6.webp" 
 SPELL_BEE_WORDS = ["Enthusiastic", "Serendipity", "Magnanimous", "Quintessential", "Pharaoh", "Onomatopoeia", "Bourgeois", "Mischievous"]
 NICKNAMES = ["Collector Achumol", "Spelling Rani", "Einstein Achu", "Budhirakshasi", "Achu-Panda", "Chakkara-Bee"]
 
@@ -81,16 +81,15 @@ def main():
                 Act as a Mallu partner. Mood: {st.session_state.mood}. Input context: {user_text}.
                 
                 STRICT LANGUAGE RULES:
-                1. The note must be MAJORLY in Manglish (Malayalam written in English script).
-                2. Only the romantic parts (the 10% warmth/care) should be in English.
-                3. Funny and Teasing parts MUST be in Manglish.
+                1. The message must be 70% Manglish (Malayalam written in English script) and 30% English.
+                2. The majority of the conversation (Funny and Teasing parts) MUST be in Manglish.
+                3. ONLY the romantic/warm part (10% of the note) should be in English.
                 
                 TONE RULES:
                 - 60% Funny, 30% Teasing, 10% Romantic.
                 - Max 200 words.
-                - No cringe drama or "movie-style" romance. 
-                - Use 'Edo' or 'Nee'. 
-                - DO NOT mention any personal details or names about me.
+                - No cringe drama. Use 'Edo' or 'Nee'. 
+                - Do NOT mention personal details about the user's real life.
                 """
                 res = model.generate_content(prompt)
                 st.session_state.note = res.text
