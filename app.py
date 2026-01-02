@@ -25,17 +25,25 @@ def get_base64_of_bin_file(bin_file):
         data = f.read()
     return base64.b64encode(data).decode()
 
+# --- ROBUST JSON CLEANING ---
+def clean_json_response(text):
+    """Removes markdown backticks and extra whitespace from Gemini response."""
+    text = text.replace("```json", "").replace("```", "").strip()
+    return text
+
 def get_dynamic_friends_q(streak):
     difficulty = "Easy" if streak < 4 else "Intermediate" if streak < 8 else "Very Hard"
-    prompt = f"Generate a unique {difficulty} difficulty MCQ about FRIENDS. Return ONLY a JSON object with keys: 'question', 'options' (list of 4), 'answer', 'hint'. No markdown."
+    prompt = f"Generate a unique {difficulty} difficulty MCQ about FRIENDS. Return ONLY a JSON object with keys: 'question', 'options' (list of 4), 'answer', 'hint'. No conversational text."
     response = model.generate_content(prompt)
-    return json.loads(response.text.strip())
+    cleaned_text = clean_json_response(response.text)
+    return json.loads(cleaned_text)
 
 def get_dynamic_word(streak):
     difficulty = "Common" if streak < 5 else "Medium" if streak < 10 else "Extremely Hard"
-    prompt = f"Generate one {difficulty} English word for a spelling bee. Return ONLY a JSON object with keys: 'word', 'meaning'. No markdown."
+    prompt = f"Generate one {difficulty} English word for a spelling bee. Return ONLY a JSON object with keys: 'word', 'meaning'. No conversational text."
     response = model.generate_content(prompt)
-    return json.loads(response.text.strip())
+    cleaned_text = clean_json_response(response.text)
+    return json.loads(cleaned_text)
 
 def main():
     st.set_page_config(page_title="Achus Game App", page_icon="🎮")
@@ -118,7 +126,7 @@ def main():
                 st.session_state.current_data = None
                 st.rerun()
 
-        # SPELL BEE LOGIC (WITH NEXT BUTTON)
+        # SPELL BEE LOGIC
         elif st.session_state.game_mode == "spellbee":
             if st.session_state.current_data is None:
                 st.session_state.current_data = get_dynamic_word(st.session_state.streak)
@@ -152,12 +160,7 @@ def main():
                     st.session_state.feedback = None
                     st.rerun()
 
-        st.markdown("</div>", unsafe_allow_html=True)
-        
-        if st.session_state.streak == 10:
-            st.balloons()
-            st.audio(VICTORY_SOUND, format="audio/mp3", autoplay=True)
-
+    if st.session_state.game_mode is not None:
         if st.button("🏠 Home Menu"):
             st.session_state.update({"game_mode": None, "current_data": None, "feedback": None, "streak": 0})
             st.rerun()
