@@ -36,11 +36,7 @@ def get_manglish_comment(is_correct):
     return random.choice(comments)
 
 def get_scenario_response(scenario):
-    prompt = f"""
-    The user has a dilemma: '{scenario}'. 
-    Generate a roundtable discussion with Chandler, Joey, Phoebe, and Ross.
-    CRITICAL: If the user types in Manglish, respond in Manglish. If English, respond in English.
-    """
+    prompt = f"Dilemma: '{scenario}'. Roundtable with Chandler, Joey, Phoebe, Ross. Respond in Manglish if the prompt is Manglish."
     return model.generate_content(prompt).text
 
 def main():
@@ -49,7 +45,8 @@ def main():
     if "session" not in st.session_state:
         st.session_state.update({
             "session": "menu", "streak": 0, "max_streak": 0, 
-            "current_data": None, "quiz_feedback": None
+            "current_data": None, "quiz_feedback": None,
+            "hints_used": 0, "next_hint_at": 0, "show_hint": False
         })
 
     # --- CSS & HEADER ---
@@ -62,20 +59,12 @@ def main():
             background-image: linear-gradient(rgba(0,0,0,0.8), rgba(0,0,0,0.8)), url('data:image/png;base64,{bg_str}');
             background-size: cover; background-position: center; background-attachment: fixed;
         }}
-        .header-container {{ 
-            display: flex; 
-            flex-direction: column; 
-            align-items: center; 
-            margin-bottom: 20px; 
-        }}
-        .logo-video {{ 
-            width: 100%; 
-            max-width: 250px; /* Adjusted for better visibility */
-            height: auto;
-        }}
-        .main-title {{ color: white; font-size: 30px; font-weight: bold; text-align: center; margin-top: 5px; }}
+        .header-container {{ display: flex; flex-direction: column; align-items: center; margin-bottom: 20px; }}
+        .logo-video {{ width: 100%; max-width: 220px; height: auto; }}
+        .main-title {{ color: white; font-size: 30px; font-weight: bold; text-align: center; }}
         .game-card {{ background: rgba(0, 0, 0, 0.85); padding: 20px; border-radius: 15px; border: 1px solid #444; color: white; margin-bottom: 10px; }}
         .stButton>button {{ border-radius: 10px; font-weight: bold; width: 100%; background: linear-gradient(135deg, #6b2d5c 0%, #f0a202 100%); color: white !important; height: 3.5em; border: none; }}
+        .hint-btn>div>button {{ background: #444 !important; height: 2.5em !important; font-size: 0.9em !important; }}
         .comment-box {{ color: #ffeb3b; font-style: italic; font-size: 1.2em; text-align: center; margin-top: 10px; }}
         </style>
         
@@ -106,12 +95,26 @@ def main():
             with st.spinner("Fetching question..."):
                 prompt = "Generate a FRIENDS MCQ. Return ONLY JSON: {'question','options','answer','hint'}."
                 st.session_state.current_data = json.loads(clean_json_response(model.generate_content(prompt).text))
+                st.session_state.show_hint = False # Reset hint for new question
 
         st.markdown("<div class='game-card'>", unsafe_allow_html=True)
         
         if st.session_state.quiz_feedback is None:
             data = st.session_state.current_data
             st.write(f"### {data['question']}")
+            
+            # --- HINT LOGIC ---
+            if st.session_state.streak >= st.session_state.next_hint_at:
+                if st.button("💡 Use Hint", key="hint_btn"):
+                    st.session_state.show_hint = True
+                    st.session_state.next_hint_at = st.session_state.streak + 5
+            else:
+                remaining = st.session_state.next_hint_at - st.session_state.streak
+                st.caption(f"🔒 Hint locked! Get {remaining} more correct answers to unlock.")
+
+            if st.session_state.show_hint:
+                st.warning(f"**Hint:** {data['hint']}")
+
             ans = st.radio("Choose:", data['options'], index=None, key=f"q_{st.session_state.streak}")
             
             if st.button("Submit Answer"):
@@ -121,6 +124,7 @@ def main():
                     st.session_state.quiz_feedback = ("success", "✅ Correct!", get_manglish_comment(True))
                 else:
                     st.session_state.streak = 0
+                    st.session_state.next_hint_at = 0 # Optional: Reset lock on fail or keep it? Keeping it makes it harder.
                     st.session_state.quiz_feedback = ("error", f"❌ Wrong! It was {data['answer']}", get_manglish_comment(False))
                 st.rerun()
         else:
@@ -141,11 +145,9 @@ def main():
     elif st.session_state.session == "scenario":
         st.markdown("<div class='game-card'>", unsafe_allow_html=True)
         st.write("### 🥪 The Roundtable")
-        scenario = st.text_area("What's the dilemma?", placeholder="Type in English or Manglish...")
+        scenario = st.text_area("What's the dilemma?")
         if st.button("Ask the Gang"):
-            if scenario:
-                with st.spinner("Characters are thinking..."):
-                    st.write(get_scenario_response(scenario))
+            st.write(get_scenario_response(scenario))
         st.markdown("</div>", unsafe_allow_html=True)
         if st.button("🏠 Home Menu"): st.session_state.session = "menu"; st.rerun()
 
