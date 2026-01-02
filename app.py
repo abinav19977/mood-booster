@@ -36,7 +36,8 @@ def get_dynamic_friends_q(streak):
     return json.loads(clean_json_response(response.text))
 
 def get_dynamic_word(streak):
-    difficulty = "Common" if streak < 5 else "Medium" if streak < 10 else "Extremely Hard"
+    # STARTING FROM MEDIUM TO HARD
+    difficulty = "Medium/Tricky" if streak < 5 else "Hard/Complex" if streak < 10 else "Extremely Hard/Obscure"
     prompt = f"Generate one {difficulty} English word for a spelling bee. Return ONLY a JSON object with keys: 'word', 'meaning'. No markdown."
     response = model.generate_content(prompt)
     return json.loads(clean_json_response(response.text))
@@ -100,8 +101,45 @@ def main():
         st.markdown(f'<div class="streak-container"><span>🔥 Streak: {st.session_state.streak}</span><span>🏆 Best: {st.session_state.max_streak}</span></div>', unsafe_allow_html=True)
         st.markdown("<div class='game-card'>", unsafe_allow_html=True)
 
-        # --- FRIENDS QUIZ LOGIC ---
-        if st.session_state.game_mode == "friends":
+        # --- SPELL BEE LOGIC (MEDIUM TO HARD) ---
+        if st.session_state.game_mode == "spellbee":
+            if st.session_state.current_data is None:
+                st.session_state.current_data = get_dynamic_word(st.session_state.streak)
+                st.session_state.correct_answered = False
+            
+            data = st.session_state.current_data
+            
+            if not st.session_state.correct_answered:
+                tts = gTTS(text=data['word'], lang='en', tld='co.in')
+                fp = io.BytesIO()
+                tts.write_to_fp(fp)
+                st.write("🔊 **Listen carefully (Medium to Hard words):**")
+                st.audio(fp, format='audio/wav')
+                
+                if st.checkbox("🔍 Show Meaning"):
+                    st.info(f"**Meaning:** {data['meaning']}")
+                
+                guess = st.text_input("Type the word:").strip()
+                if st.button("Verify Spelling"):
+                    if guess.lower() == data['word'].lower():
+                        st.session_state.streak += 1
+                        st.session_state.max_streak = max(st.session_state.streak, st.session_state.max_streak)
+                        st.session_state.feedback = "✅ Spot on! You're brilliant."
+                        st.session_state.correct_answered = True
+                    else:
+                        st.session_state.streak = 0
+                        st.session_state.feedback = f"❌ Wrong! It was '{data['word']}'."
+                        st.session_state.current_data = None
+                    st.rerun()
+            else:
+                st.success(st.session_state.feedback)
+                if st.button("➡️ Next Question"):
+                    st.session_state.current_data = None
+                    st.session_state.feedback = None
+                    st.rerun()
+
+        # --- FRIENDS QUIZ LOGIC (WITH RESTRICTED HINT) ---
+        elif st.session_state.game_mode == "friends":
             if st.session_state.current_data is None:
                 st.session_state.current_data = get_dynamic_friends_q(st.session_state.streak)
                 st.session_state.show_hint = False
@@ -111,7 +149,6 @@ def main():
             st.write(f"**{data['question']}**")
             choice = st.radio("Options:", data['options'], index=None)
 
-            # Hint logic: Available initially, then every 5 answers after use
             if st.session_state.q_count >= st.session_state.next_hint_available:
                 if st.button("💡 Use Hint"):
                     st.session_state.show_hint = True
@@ -133,43 +170,6 @@ def main():
                     st.session_state.feedback = f"❌ Incorrect! It was {data['answer']}."
                 st.session_state.current_data = None
                 st.rerun()
-
-        # --- SPELL BEE LOGIC ---
-        elif st.session_state.game_mode == "spellbee":
-            if st.session_state.current_data is None:
-                st.session_state.current_data = get_dynamic_word(st.session_state.streak)
-                st.session_state.correct_answered = False
-            
-            data = st.session_state.current_data
-            
-            if not st.session_state.correct_answered:
-                tts = gTTS(text=data['word'], lang='en', tld='co.in')
-                fp = io.BytesIO()
-                tts.write_to_fp(fp)
-                st.write("🔊 **Listen carefully:**")
-                st.audio(fp, format='audio/wav')
-                
-                if st.checkbox("🔍 Show Meaning"):
-                    st.info(f"**Meaning:** {data['meaning']}")
-                
-                guess = st.text_input("Type the word:").strip()
-                if st.button("Verify Spelling"):
-                    if guess.lower() == data['word'].lower():
-                        st.session_state.streak += 1
-                        st.session_state.max_streak = max(st.session_state.streak, st.session_state.max_streak)
-                        st.session_state.feedback = "✅ Spot on!"
-                        st.session_state.correct_answered = True
-                    else:
-                        st.session_state.streak = 0
-                        st.session_state.feedback = f"❌ Wrong! It was '{data['word']}'."
-                        st.session_state.current_data = None
-                    st.rerun()
-            else:
-                st.success(st.session_state.feedback)
-                if st.button("➡️ Next Question"):
-                    st.session_state.current_data = None
-                    st.session_state.feedback = None
-                    st.rerun()
 
         st.markdown("</div>", unsafe_allow_html=True)
         
