@@ -8,18 +8,16 @@ import json
 import base64
 
 # --- CONFIG ---
-INITIAL_LOGO = "image_923a6b.png"  # Baby photo logo
-FRIENDS_BG = "image_923a6b.png"    # Background for quiz
+INITIAL_LOGO = "image_923a6b.png"
+FRIENDS_BG = "image_923a6b.png"
 BADGES = {5: "🥉 Bronze Achu", 10: "🥈 Silver Achu", 15: "🥇 Gold Achu", 20: "💎 Diamond Queen"}
-
-# Victory Sound link
 VICTORY_SOUND = "https://www.myinstants.com/media/sounds/crowd-cheer.mp3"
 
 if "GEMINI_API_KEY" in st.secrets:
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
     model = genai.GenerativeModel('gemini-2.0-flash')
 else:
-    st.error("Missing API Key! Please add it to Streamlit Secrets.")
+    st.error("Missing API Key!")
     st.stop()
 
 def get_base64_of_bin_file(bin_file):
@@ -27,10 +25,9 @@ def get_base64_of_bin_file(bin_file):
         data = f.read()
     return base64.b64encode(data).decode()
 
-# --- DYNAMIC CONTENT GENERATORS ---
 def get_dynamic_friends_q(streak):
     difficulty = "Easy" if streak < 4 else "Intermediate" if streak < 8 else "Very Hard"
-    prompt = f"Generate a unique {difficulty} difficulty MCQ about the TV show FRIENDS. Return ONLY a JSON object with keys: 'question', 'options' (list of 4), 'answer', 'hint'. No markdown."
+    prompt = f"Generate a unique {difficulty} difficulty MCQ about FRIENDS. Return ONLY a JSON object with keys: 'question', 'options' (list of 4), 'answer', 'hint'. No markdown."
     response = model.generate_content(prompt)
     return json.loads(response.text.strip())
 
@@ -43,12 +40,12 @@ def get_dynamic_word(streak):
 def main():
     st.set_page_config(page_title="Achus Game App", page_icon="🎮")
     
-    # Initialize session state
     if "game_mode" not in st.session_state:
         st.session_state.update({
             "game_mode": None, "streak": 0, "max_streak": 0, 
             "current_data": None, "q_count": 0, "feedback": None,
-            "next_hint_available": 0, "show_hint": False
+            "next_hint_available": 0, "show_hint": False,
+            "correct_answered": False
         })
 
     # --- DYNAMIC STYLING ---
@@ -81,7 +78,6 @@ def main():
 
     st.markdown('<p class="big-title">Achus Game App</p>', unsafe_allow_html=True)
 
-    # --- HOME PAGE ---
     if st.session_state.game_mode is None:
         col_l, col_r = st.columns([1, 1])
         with col_l:
@@ -96,7 +92,6 @@ def main():
                 st.session_state.game_mode = "spellbee"
                 st.rerun()
     
-    # --- GAME PLAY AREA ---
     else:
         st.markdown(f'<div class="streak-container"><span>🔥 Streak: {st.session_state.streak}</span><span>🏆 Best: {st.session_state.max_streak}</span></div>', unsafe_allow_html=True)
         st.markdown("<div class='game-card'>", unsafe_allow_html=True)
@@ -104,75 +99,64 @@ def main():
         # FRIENDS QUIZ LOGIC
         if st.session_state.game_mode == "friends":
             if st.session_state.current_data is None:
-                with st.spinner("Finding a question..."):
-                    st.session_state.current_data = get_dynamic_friends_q(st.session_state.streak)
-                    st.session_state.show_hint = False
+                st.session_state.current_data = get_dynamic_friends_q(st.session_state.streak)
             
             data = st.session_state.current_data
             st.write(f"#### Question {st.session_state.q_count + 1}")
             st.write(f"**{data['question']}**")
             choice = st.radio("Options:", data['options'], index=None)
             
-            if st.session_state.q_count >= st.session_state.next_hint_available:
-                if st.button("💡 Use Hint"):
-                    st.session_state.show_hint = True
-                    st.session_state.next_hint_available = st.session_state.q_count + 5
-                if st.session_state.show_hint: st.info(data['hint'])
-            
             if st.button("Submit Answer"):
                 if choice == data['answer']:
                     st.session_state.streak += 1
                     st.session_state.max_streak = max(st.session_state.streak, st.session_state.max_streak)
                     st.session_state.q_count += 1
-                    st.session_state.feedback = f"✅ Correct! {model.generate_content('Short Friends-themed romantic praise.').text}"
+                    st.session_state.feedback = "✅ Correct!"
                 else:
                     st.session_state.streak = 0
                     st.session_state.feedback = f"❌ Incorrect! It was {data['answer']}."
-                st.session_state.current_data = None  # Clear for next question
+                st.session_state.current_data = None
                 st.rerun()
 
-        # SPELL BEE LOGIC
+        # SPELL BEE LOGIC (WITH NEXT BUTTON)
         elif st.session_state.game_mode == "spellbee":
             if st.session_state.current_data is None:
-                with st.spinner("Preparing next word..."):
-                    st.session_state.current_data = get_dynamic_word(st.session_state.streak)
+                st.session_state.current_data = get_dynamic_word(st.session_state.streak)
+                st.session_state.correct_answered = False
             
             data = st.session_state.current_data
-            tts = gTTS(text=data['word'], lang='en', tld='co.in')
-            fp = io.BytesIO()
-            tts.write_to_fp(fp)
             
-            st.write("🔊 Listen carefully (Male Indian Accent):")
-            st.audio(fp, format='audio/wav')
-            
-            if st.checkbox("Show Meaning"): st.write(f"*Definition: {data['meaning']}*")
-            guess = st.text_input("Type the word:").strip()
-            
-            if st.button("Verify Spelling"):
-                if guess.lower() == data['word'].lower():
-                    st.session_state.streak += 1
-                    st.session_state.max_streak = max(st.session_state.streak, st.session_state.max_streak)
-                    st.session_state.feedback = "✅ Spot on! Next word loading..."
-                    st.session_state.current_data = None  # AUTO-LOAD NEXT WORD
+            if not st.session_state.correct_answered:
+                tts = gTTS(text=data['word'], lang='en', tld='co.in')
+                fp = io.BytesIO()
+                tts.write_to_fp(fp)
+                st.write("🔊 Listen carefully:")
+                st.audio(fp, format='audio/wav')
+                
+                guess = st.text_input("Type the word:").strip()
+                if st.button("Verify Spelling"):
+                    if guess.lower() == data['word'].lower():
+                        st.session_state.streak += 1
+                        st.session_state.max_streak = max(st.session_state.streak, st.session_state.max_streak)
+                        st.session_state.feedback = "✅ Spot on!"
+                        st.session_state.correct_answered = True
+                    else:
+                        st.session_state.streak = 0
+                        st.session_state.feedback = f"❌ Wrong! It was '{data['word']}'."
+                        st.session_state.current_data = None
                     st.rerun()
-                else:
-                    st.session_state.streak = 0
-                    st.session_state.feedback = f"❌ Wrong! It was '{data['word']}'."
+            else:
+                st.success(st.session_state.feedback)
+                if st.button("➡️ Next Question"):
                     st.session_state.current_data = None
+                    st.session_state.feedback = None
                     st.rerun()
 
         st.markdown("</div>", unsafe_allow_html=True)
         
-        # Victory Sound & Balloons at Streak 10
         if st.session_state.streak == 10:
             st.balloons()
             st.audio(VICTORY_SOUND, format="audio/mp3", autoplay=True)
-
-        if st.session_state.feedback:
-            st.divider()
-            st.info(st.session_state.feedback)
-            badge = next((b for s, b in reversed(list(BADGES.items())) if st.session_state.max_streak >= s), "🌱 Rookie")
-            st.success(f"Rank: {badge}")
 
         if st.button("🏠 Home Menu"):
             st.session_state.update({"game_mode": None, "current_data": None, "feedback": None, "streak": 0})
