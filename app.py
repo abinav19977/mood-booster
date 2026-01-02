@@ -25,25 +25,21 @@ def get_base64_of_bin_file(bin_file):
         data = f.read()
     return base64.b64encode(data).decode()
 
-# --- ROBUST JSON CLEANING ---
 def clean_json_response(text):
-    """Removes markdown backticks and extra whitespace from Gemini response."""
     text = text.replace("```json", "").replace("```", "").strip()
     return text
 
 def get_dynamic_friends_q(streak):
     difficulty = "Easy" if streak < 4 else "Intermediate" if streak < 8 else "Very Hard"
-    prompt = f"Generate a unique {difficulty} difficulty MCQ about FRIENDS. Return ONLY a JSON object with keys: 'question', 'options' (list of 4), 'answer', 'hint'. No conversational text."
+    prompt = f"Generate a unique {difficulty} difficulty MCQ about FRIENDS. Return ONLY a JSON object with keys: 'question', 'options' (list of 4), 'answer', 'hint'. No markdown."
     response = model.generate_content(prompt)
-    cleaned_text = clean_json_response(response.text)
-    return json.loads(cleaned_text)
+    return json.loads(clean_json_response(response.text))
 
 def get_dynamic_word(streak):
     difficulty = "Common" if streak < 5 else "Medium" if streak < 10 else "Extremely Hard"
-    prompt = f"Generate one {difficulty} English word for a spelling bee. Return ONLY a JSON object with keys: 'word', 'meaning'. No conversational text."
+    prompt = f"Generate one {difficulty} English word for a spelling bee. Return ONLY a JSON object with keys: 'word', 'meaning'. No markdown."
     response = model.generate_content(prompt)
-    cleaned_text = clean_json_response(response.text)
-    return json.loads(cleaned_text)
+    return json.loads(clean_json_response(response.text))
 
 def main():
     st.set_page_config(page_title="Achus Game App", page_icon="🎮")
@@ -104,16 +100,28 @@ def main():
         st.markdown(f'<div class="streak-container"><span>🔥 Streak: {st.session_state.streak}</span><span>🏆 Best: {st.session_state.max_streak}</span></div>', unsafe_allow_html=True)
         st.markdown("<div class='game-card'>", unsafe_allow_html=True)
 
-        # FRIENDS QUIZ LOGIC
+        # --- FRIENDS QUIZ LOGIC ---
         if st.session_state.game_mode == "friends":
             if st.session_state.current_data is None:
                 st.session_state.current_data = get_dynamic_friends_q(st.session_state.streak)
+                st.session_state.show_hint = False
             
             data = st.session_state.current_data
             st.write(f"#### Question {st.session_state.q_count + 1}")
             st.write(f"**{data['question']}**")
             choice = st.radio("Options:", data['options'], index=None)
-            
+
+            # Hint logic: Available initially, then every 5 answers after use
+            if st.session_state.q_count >= st.session_state.next_hint_available:
+                if st.button("💡 Use Hint"):
+                    st.session_state.show_hint = True
+                    st.session_state.next_hint_available = st.session_state.q_count + 5
+                
+                if st.session_state.show_hint:
+                    st.info(f"**Hint:** {data['hint']}")
+            else:
+                st.caption(f"Hint locked! Correctly answer {st.session_state.next_hint_available - st.session_state.q_count} more to unlock.")
+
             if st.button("Submit Answer"):
                 if choice == data['answer']:
                     st.session_state.streak += 1
@@ -126,7 +134,7 @@ def main():
                 st.session_state.current_data = None
                 st.rerun()
 
-        # SPELL BEE LOGIC
+        # --- SPELL BEE LOGIC ---
         elif st.session_state.game_mode == "spellbee":
             if st.session_state.current_data is None:
                 st.session_state.current_data = get_dynamic_word(st.session_state.streak)
@@ -138,8 +146,11 @@ def main():
                 tts = gTTS(text=data['word'], lang='en', tld='co.in')
                 fp = io.BytesIO()
                 tts.write_to_fp(fp)
-                st.write("🔊 Listen carefully:")
+                st.write("🔊 **Listen carefully:**")
                 st.audio(fp, format='audio/wav')
+                
+                if st.checkbox("🔍 Show Meaning"):
+                    st.info(f"**Meaning:** {data['meaning']}")
                 
                 guess = st.text_input("Type the word:").strip()
                 if st.button("Verify Spelling"):
@@ -160,7 +171,12 @@ def main():
                     st.session_state.feedback = None
                     st.rerun()
 
-    if st.session_state.game_mode is not None:
+        st.markdown("</div>", unsafe_allow_html=True)
+        
+        if st.session_state.streak == 10:
+            st.balloons()
+            st.audio(VICTORY_SOUND, format="audio/mp3", autoplay=True)
+
         if st.button("🏠 Home Menu"):
             st.session_state.update({"game_mode": None, "current_data": None, "feedback": None, "streak": 0})
             st.rerun()
