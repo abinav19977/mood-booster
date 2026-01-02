@@ -4,31 +4,10 @@ from gtts import gTTS
 import random
 import io
 import os
+import json
 
 # --- CONFIG ---
 PAGE_LOGO = "535a00a0-0968-491d-92db-30c32ced7ac6.webp" 
-
-# --- DATA ---
-FRIENDS_LEVELS = {
-    "intermediate": [
-        {"q": "What is the name of Joey's penguin?", "o": ["Hugsy", "Waddle", "Pingu", "Snowy"], "a": "Hugsy", "h": "It's a bedtime pal."},
-        {"q": "How many sisters does Joey have?", "o": ["5", "6", "7", "8"], "a": "7", "h": "It's a lucky number for some."},
-        {"q": "What was the name of Ross's monkey?", "o": ["Marcel", "George", "Abu", "Kong"], "a": "Marcel", "h": "Starts with M."},
-    ],
-    "hard": [
-        {"q": "What is Chandler's middle name?", "o": ["Muriel", "Francis", "Eustace", "Bing"], "a": "Muriel", "h": "It's quite an old-fashioned female name."},
-        {"q": "What is the name of the 'Geller Cup' trophy?", "o": ["A Troll", "A Doll", "A Monkey", "A Soda Can"], "a": "A Troll", "h": "It's nailed to a 2x4."},
-        {"q": "What was the name of Rachel’s hairless cat?", "o": ["Mrs. Whiskerson", "Fluffy", "Baldy", "Minerva"], "a": "Mrs. Whiskerson", "h": "It sounds very formal."},
-    ]
-}
-
-SPELL_BEE_DATA = [
-    {"w": "Queue", "m": "A line of people waiting.", "l": "easy"},
-    {"w": "Colonel", "m": "A high-ranking military officer.", "l": "medium"},
-    {"w": "Occurrence", "m": "An event that happens.", "l": "hard"},
-    {"w": "Diatribe", "m": "A forceful and bitter verbal attack.", "l": "hard"}
-]
-
 BADGES = {5: "🥉 Bronze Achu", 10: "🥈 Silver Achu", 15: "🥇 Gold Achu", 20: "💎 Diamond Queen"}
 
 if "GEMINI_API_KEY" in st.secrets:
@@ -38,15 +17,82 @@ else:
     st.error("Missing API Key!")
     st.stop()
 
+# --- DYNAMIC CONTENT GENERATORS ---
+def get_dynamic_friends_q(streak):
+    difficulty = "Intermediate" if streak < 5 else "Hard"
+    prompt = f"""
+    Generate a unique {difficulty} difficulty multiple choice question about the TV show FRIENDS.
+    Return ONLY a JSON object with keys: "question", "options" (list of 4), "answer" (string), "hint".
+    Ensure the answer is exactly one of the options.
+    """
+    response = model.generate_content(prompt)
+    return json.loads(response.text.replace('```json', '').replace('```', ''))
+
+def get_dynamic_word(streak):
+    difficulty = "Tricky but common" if streak < 5 else "Obscure and complex"
+    prompt = f"""
+    Generate one {difficulty} English word for a spelling bee.
+    Return ONLY a JSON object with keys: "word", "meaning".
+    """
+    response = model.generate_content(prompt)
+    return json.loads(response.text.replace('```json', '').replace('```', ''))
+
 def main():
     image_exists = os.path.exists(PAGE_LOGO)
-    st.set_page_config(page_title="Achus Game App", page_icon=PAGE_LOGO if image_exists else "🎮")
-    
-    st.markdown("""
+    st.set_page_config(page_title="Achus Game App", page_icon="🎮")
+
+    # Initializing Session States
+    for key in ["game_mode", "streak", "max_streak", "current_data", "q_count", "feedback"]:
+        if key not in st.session_state:
+            st.session_state[key] = 0 if "streak" in key or "count" in key else None
+
+    # --- THEME CSS ---
+    # Default Theme
+    bg_color = "#0e1117"
+    accent_gradient = "linear-gradient(135deg, #FF4B4B 0%, #FF8E8E 100%)"
+    card_bg = "rgba(255, 255, 255, 0.05)"
+
+    if st.session_state.game_mode == "friends":
+        # Friends Theme (Central Perk Vibes: Purple/Coffee)
+        bg_color = "#240b36"
+        accent_gradient = "linear-gradient(135deg, #6b2d5c 0%, #f0a202 100%)"
+        card_bg = "rgba(107, 45, 92, 0.2)"
+    elif st.session_state.game_mode == "spellbee":
+        # Spell Bee Theme (Honey Bee Vibes: Yellow/Black)
+        bg_color = "#1a1a1a"
+        accent_gradient = "linear-gradient(135deg, #fbc02d 0%, #000000 100%)"
+        card_bg = "rgba(251, 192, 45, 0.1)"
+
+    st.markdown(f"""
         <style>
-        .big-title { font-size: 45px !important; font-weight: 700; color: #FF4B4B; }
-        .stButton>button { width: 100%; border-radius: 10px; font-weight: bold; }
-        .streak-box { padding: 10px; background: #333; color: gold; border-radius: 10px; text-align: center; font-size: 20px; }
+        .stApp {{ background-color: {bg_color}; transition: background 0.5s ease; }}
+        .big-title {{ font-size: 50px !important; font-weight: 700; color: #ffffff; text-shadow: 2px 2px 4px rgba(0,0,0,0.5); }}
+        .stButton>button {{ 
+            border-radius: 15px; 
+            background: {accent_gradient}; 
+            color: white !important; 
+            height: 3.5em; 
+            border: none;
+            font-weight: bold;
+            transition: transform 0.2s;
+        }}
+        .stButton>button:hover {{ transform: scale(1.02); }}
+        .game-card {{ 
+            background: {card_bg}; 
+            padding: 25px; 
+            border-radius: 20px; 
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+        }}
+        .streak-container {{ 
+            background: rgba(0,0,0,0.3); 
+            padding: 15px; 
+            border-radius: 15px; 
+            margin-bottom: 20px; 
+            display: flex; 
+            justify-content: space-between;
+            border: 1px solid rgba(255, 215, 0, 0.3);
+        }}
         </style>
         """, unsafe_allow_html=True)
 
@@ -57,105 +103,93 @@ def main():
     with col2:
         st.markdown('<p class="big-title">Achus Game App</p>', unsafe_allow_html=True)
 
-    # --- SESSION STATE ---
-    states = {
-        "game_mode": None, "streak": 0, "max_streak": 0, 
-        "current_q": None, "hint_used": 0, "q_count": 0, "feedback": None
-    }
-    for k, v in states.items():
-        if k not in st.session_state: st.session_state[k] = v
-
     if not st.session_state.game_mode:
-        st.write("### What does Achumol want to play today?")
+        st.write("### Choose your journey, Achumol!")
         c1, c2 = st.columns(2)
         if c1.button("☕ Friends Series Quiz"):
             st.session_state.game_mode = "friends"
             st.rerun()
-        if c2.button("🐝 Spell Bee"):
+        if c2.button("🐝 Spell Bee Challenge"):
             st.session_state.game_mode = "spellbee"
             st.rerun()
     else:
-        # Display Streak
-        st.markdown(f'<div class="streak-box">🔥 Current Streak: {st.session_state.streak} | 🏆 Max Streak: {st.session_state.max_streak}</div>', unsafe_allow_html=True)
-        
-        # --- FRIENDS QUIZ LOGIC ---
+        # Streak Header
+        st.markdown(f'<div class="streak-container"><span style="color:#fbc02d">🔥 Streak: {st.session_state.streak}</span><span style="color:#ffffff">🏆 Best: {st.session_state.max_streak}</span></div>', unsafe_allow_html=True)
+        st.markdown("<div class='game-card'>", unsafe_allow_html=True)
+
+        # --- DYNAMIC FRIENDS QUIZ ---
         if st.session_state.game_mode == "friends":
-            if not st.session_state.current_q:
-                level = "hard" if st.session_state.streak > 5 else "intermediate"
-                st.session_state.current_q = random.choice(FRIENDS_LEVELS[level])
+            if not st.session_state.current_data:
+                with st.spinner("Generating a 'pivotal' question..."):
+                    st.session_state.current_data = get_dynamic_friends_q(st.session_state.streak)
             
-            q = st.session_state.current_q
-            st.write(f"### Question {st.session_state.q_count + 1}:")
-            st.write(f"**{q['q']}**")
+            data = st.session_state.current_data
+            st.write(f"### Question {st.session_state.q_count + 1}")
+            st.write(f"**{data['question']}**")
             
-            user_choice = st.radio("Choose one:", q['o'], index=None)
+            user_choice = st.radio("Pick your answer:", data['options'], index=None)
             
-            # Hint logic
-            if st.session_state.q_count % 5 == 0 and st.session_state.q_count != 0:
-                if st.button("💡 Use Hint"):
-                    st.info(f"Hint: {q['h']}")
+            h_col, s_col = st.columns([1, 3])
+            with h_col:
+                if (st.session_state.q_count + 1) % 5 == 0 and st.button("💡 Hint"):
+                    st.info(data['hint'])
+            
+            with s_col:
+                if st.button("Submit Answer"):
+                    if user_choice == data['answer']:
+                        st.session_state.streak += 1
+                        st.session_state.max_streak = max(st.session_state.streak, st.session_state.max_streak)
+                        st.session_state.q_count += 1
+                        st.session_state.feedback = f"✅ Correct! {model.generate_content('Give a one-sentence Friends-themed romantic compliment.').text}"
+                    else:
+                        st.session_state.streak = 0
+                        st.session_state.feedback = f"❌ Wrong! It was {data['answer']}. {model.generate_content('Give a Chandler Bing-style sarcastic joke.').text}"
+                    st.session_state.current_data = None
+                    st.rerun()
 
-            if st.button("Submit Answer"):
-                if user_choice == q['a']:
-                    st.session_state.streak += 1
-                    st.session_state.q_count += 1
-                    if st.session_state.streak > st.session_state.max_streak:
-                        st.session_state.max_streak = st.session_state.streak
-                    
-                    p = f"Achumol got it right! Friends mood: Correct. Tone: 10% Romantic, 90% Friends appreciation. No cringe."
-                    st.session_state.feedback = model.generate_content(p).text
-                else:
-                    st.session_state.streak = 0
-                    p = f"Achumol got it wrong! Answer was {q['a']}. Tone: Sarcastic Friends troll. No cringe."
-                    st.session_state.feedback = model.generate_content(p).text
-                
-                st.session_state.current_q = None
-                st.rerun()
-
-        # --- SPELL BEE LOGIC ---
+        # --- DYNAMIC SPELL BEE ---
         elif st.session_state.game_mode == "spellbee":
-            if not st.session_state.current_word_obj:
-                st.session_state.current_word_obj = random.choice(SPELL_BEE_DATA)
+            if not st.session_state.current_data:
+                with st.spinner("Preparing the audio..."):
+                    st.session_state.current_data = get_dynamic_word(st.session_state.streak)
             
-            word_obj = st.session_state.current_word_obj
+            data = st.session_state.current_data
             
-            # Indian English Pronunciation
-            tts = gTTS(text=word_obj['w'], lang='en', tld='co.in')
+            # Indian English Accent Pronunciation
+            tts = gTTS(text=data['word'], lang='en', tld='co.in')
             fp = io.BytesIO()
             tts.write_to_fp(fp)
             st.audio(fp, format='audio/mp3')
 
-            if st.toggle("Show Meaning"):
-                st.caption(f"Meaning: {word_obj['m']}")
+            if st.checkbox("Need the meaning?"): 
+                st.write(f"*Dictionary says: {data['meaning']}*")
 
-            guess = st.text_input("Enter Spelling:").strip()
-            if st.button("Check"):
-                if guess.lower() == word_obj['w'].lower():
+            guess = st.text_input("Type the spelling here:", placeholder="Spelling goes here...").strip()
+            if st.button("Verify"):
+                if guess.lower() == data['word'].lower():
                     st.session_state.streak += 1
-                    if st.session_state.streak > st.session_state.max_streak:
-                        st.session_state.max_streak = st.session_state.streak
-                    st.session_state.feedback = "Correct! Achumol, you are a genius! 🌟"
+                    st.session_state.max_streak = max(st.session_state.streak, st.session_state.max_streak)
+                    st.session_state.feedback = "✅ Spot on! You're a spelling wizard."
                 else:
                     st.session_state.streak = 0
-                    st.session_state.feedback = f"Wrong! Spelling is {word_obj['w']}. Try harder, dummy! 😉"
-                st.session_state.current_word_obj = None
+                    st.session_state.feedback = f"❌ Incorrect! The word was '{data['word']}'. Back to school! 😉"
+                st.session_state.current_data = None
                 st.rerun()
 
-        # --- FEEDBACK & BADGES ---
+        st.markdown("</div>", unsafe_allow_html=True)
+        
         if st.session_state.feedback:
-            st.write("---")
-            st.write(st.session_state.feedback)
-            
-            # Show Badge
-            for score, badge in BADGES.items():
-                if st.session_state.max_streak >= score:
-                    st.toast(f"New Badge Unlocked: {badge}!")
-                    st.success(f"🏅 Current Rank: {badge}")
+            st.divider()
+            st.info(st.session_state.feedback)
+            # Badge Logic
+            current_badge = next((b for s, b in reversed(list(BADGES.items())) if st.session_state.max_streak >= s), "🌱 Rookie")
+            st.success(f"🏆 Rank: {current_badge}")
 
-        if st.button("Back to Menu"):
+        if st.button("🔙 Back to Main Menu"):
             st.session_state.game_mode = None
+            st.session_state.current_data = None
+            st.session_state.feedback = None
             st.rerun()
 
 if __name__ == "__main__":
-    if "current_word_obj" not in st.session_state: st.session_state.current_word_obj = None
     main()
