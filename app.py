@@ -8,18 +8,18 @@ import json
 import base64
 
 # --- CONFIG ---
-INITIAL_LOGO = "image_923a6b.png"
-FRIENDS_BG = "image_923a6b.png"
-BADGES = {5: "🥉 Bronze Achu", 10: "🥈 Silver Achu", 15: "🥇 Gold Achu", 20: "💎 Diamond Queen"}
+# Ensure these filenames match exactly what you have in your GitHub folder
+INITIAL_LOGO = "image_923a6b.png"  # Your initial baby photo logo
+FRIENDS_BG = "image_923a6b.png"    # Used as background for the quiz
+PAGE_LOGO_ICON = "535a00a0-0968-491d-92db-30c32ced7ac6.webp" 
 
-# Victory Sound (Crowd Cheer)
-VICTORY_SOUND = "https://www.myinstants.com/media/sounds/crowd-cheer.mp3"
+BADGES = {5: "🥉 Bronze Achu", 10: "🥈 Silver Achu", 15: "🥇 Gold Achu", 20: "💎 Diamond Queen"}
 
 if "GEMINI_API_KEY" in st.secrets:
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
     model = genai.GenerativeModel('gemini-2.0-flash')
 else:
-    st.error("Missing API Key! Please add GEMINI_API_KEY to your Secrets.")
+    st.error("Missing API Key!")
     st.stop()
 
 def get_base64_of_bin_file(bin_file):
@@ -30,36 +30,26 @@ def get_base64_of_bin_file(bin_file):
 # --- DYNAMIC CONTENT GENERATORS ---
 def get_dynamic_friends_q(streak):
     difficulty = "Easy" if streak < 4 else "Intermediate" if streak < 8 else "Very Hard"
-    prompt = f"Generate a unique {difficulty} difficulty MCQ about FRIENDS. Return ONLY a JSON object with keys: 'question', 'options' (list of 4), 'answer', 'hint'. Do not use markdown formatting."
+    prompt = f"Generate a unique {difficulty} difficulty MCQ about FRIENDS. Return ONLY a JSON object with keys: 'question', 'options' (list of 4), 'answer', 'hint'."
     response = model.generate_content(prompt)
-    return json.loads(response.text.strip())
+    return json.loads(response.text.replace('```json', '').replace('```', ''))
 
 def get_dynamic_word(streak):
-    difficulty = "Common" if streak < 5 else "Medium" if streak < 10 else "Extremely Hard"
-    prompt = f"Generate one {difficulty} English word for a spelling bee. Return ONLY a JSON object with keys: 'word', 'meaning'. Do not use markdown formatting."
+    difficulty = "Common/Easy" if streak < 5 else "Medium/Tricky" if streak < 10 else "Extremely Hard/Obscure"
+    prompt = f"Generate one {difficulty} English word for a spelling bee. Return ONLY a JSON object with keys: 'word', 'meaning'."
     response = model.generate_content(prompt)
-    return json.loads(response.text.strip())
+    return json.loads(response.text.replace('```json', '').replace('```', ''))
 
 def main():
+    # Set the browser tab icon
     st.set_page_config(page_title="Achus Game App", page_icon="🎮")
     
-    # Initialize session state keys if they don't exist
     if "game_mode" not in st.session_state:
-        st.session_state.game_mode = None
-    if "streak" not in st.session_state:
-        st.session_state.streak = 0
-    if "max_streak" not in st.session_state:
-        st.session_state.max_streak = 0
-    if "current_data" not in st.session_state:
-        st.session_state.current_data = None
-    if "q_count" not in st.session_state:
-        st.session_state.q_count = 0
-    if "feedback" not in st.session_state:
-        st.session_state.feedback = None
-    if "next_hint_available" not in st.session_state:
-        st.session_state.next_hint_available = 0
-    if "show_hint" not in st.session_state:
-        st.session_state.show_hint = False
+        st.session_state.update({
+            "game_mode": None, "streak": 0, "max_streak": 0, 
+            "current_data": None, "q_count": 0, "feedback": None,
+            "next_hint_available": 0, "show_hint": False
+        })
 
     # --- DYNAMIC STYLING ---
     bg_style = "background-color: #0e1117;" 
@@ -69,7 +59,7 @@ def main():
     if st.session_state.game_mode == "friends":
         try:
             bin_str = get_base64_of_bin_file(FRIENDS_BG)
-            bg_style = f"background-image: linear-gradient(rgba(0,0,0,0.85), rgba(0,0,0,0.85)), url('data:image/png;base64,{bin_str}'); background-size: cover; background-attachment: fixed;"
+            bg_style = f"background-image: linear-gradient(rgba(0,0,0,0.8), rgba(0,0,0,0.8)), url('data:image/png;base64,{bin_str}'); background-size: cover; background-attachment: fixed;"
         except:
             bg_style = "background-color: #240b36;"
         accent = "linear-gradient(135deg, #6b2d5c 0%, #f0a202 100%)"
@@ -82,24 +72,33 @@ def main():
     st.markdown(f"""
         <style>
         .stApp {{ {bg_style} }}
-        .big-title {{ font-size: 42px !important; font-weight: 700; color: white; text-align: center; margin-bottom: 20px; text-shadow: 2px 2px 8px rgba(0,0,0,0.5); }}
+        .big-title {{ font-size: 42px !important; font-weight: 700; color: white; text-align: center; margin-bottom: 20px; }}
         .game-card {{ background: {card_color}; padding: 30px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(10px); color: white; }}
-        .stButton>button {{ border-radius: 12px; background: {accent}; color: white !important; font-weight: bold; border: none; height: 3.5em; width: 100%; transition: 0.3s; }}
-        .stButton>button:hover {{ transform: scale(1.02); opacity: 0.9; }}
-        .streak-container {{ background: rgba(0,0,0,0.7); padding: 12px; border-radius: 15px; display: flex; justify-content: space-between; border: 1px solid gold; margin-bottom: 20px; color: gold; font-weight: bold; }}
+        .stButton>button {{ border-radius: 12px; background: {accent}; color: white !important; font-weight: bold; border: none; height: 3.5em; width: 100%; }}
+        .streak-container {{ background: rgba(0,0,0,0.6); padding: 12px; border-radius: 15px; display: flex; justify-content: space-between; border: 1px solid gold; margin-bottom: 20px; color: gold; font-weight: bold; }}
         </style>
         """, unsafe_allow_html=True)
 
+    # --- TOP HEADER ---
     st.markdown('<p class="big-title">Achus Game App</p>', unsafe_allow_html=True)
 
-    # --- HOME PAGE ---
-    if st.session_state.game_mode is None:
-        col_l, col_r = st.columns([1, 1])
-        with col_l:
-            if os.path.exists(INITIAL_LOGO):
-                st.image(INITIAL_LOGO, use_container_width=True)
-        with col_r:
-            st.write("### Choose a game, Achumol!")
+    # --- HOME PAGE (Selection Menu) ---
+    if not st.session_state.game_mode:
+        # Show the Baby Photo Logo ONLY on Home Page
+        if os.path.exists(INITIAL_LOGO):
+            col_l, col_r = st.columns([1, 1])
+            with col_l:
+                st.image(INITIAL_LOGO, width=180)
+            with col_r:
+                st.write("### What does Achumol want to play?")
+                if st.button("☕ Friends Series Quiz"):
+                    st.session_state.game_mode = "friends"
+                    st.rerun()
+                if st.button("🐝 Spell Bee Challenge"):
+                    st.session_state.game_mode = "spellbee"
+                    st.rerun()
+        else:
+            st.write("### What does Achumol want to play?")
             if st.button("☕ Friends Series Quiz"):
                 st.session_state.game_mode = "friends"
                 st.rerun()
@@ -113,10 +112,9 @@ def main():
         st.markdown("<div class='game-card'>", unsafe_allow_html=True)
 
         if st.session_state.game_mode == "friends":
-            if st.session_state.current_data is None:
-                with st.spinner("Finding a question..."):
-                    st.session_state.current_data = get_dynamic_friends_q(st.session_state.streak)
-                    st.session_state.show_hint = False
+            if not st.session_state.current_data:
+                st.session_state.current_data = get_dynamic_friends_q(st.session_state.streak)
+                st.session_state.show_hint = False
             
             data = st.session_state.current_data
             st.write(f"#### Question {st.session_state.q_count + 1}")
@@ -142,18 +140,19 @@ def main():
                 st.rerun()
 
         elif st.session_state.game_mode == "spellbee":
-            if st.session_state.current_data is None:
-                with st.spinner("Preparing word..."):
-                    st.session_state.current_data = get_dynamic_word(st.session_state.streak)
+            if not st.session_state.current_data:
+                st.session_state.current_data = get_dynamic_word(st.session_state.streak)
             
             data = st.session_state.current_data
             tts = gTTS(text=data['word'], lang='en', tld='co.in')
             fp = io.BytesIO()
             tts.write_to_fp(fp)
             
-            st.write("🔊 Listen carefully (Male Indian Accent):")
+            st.write("🔊 Listen carefully:")
             st.audio(fp, format='audio/wav')
             
+            if st.button("🔄 Reload Audio"): st.rerun()
+
             if st.checkbox("Show Meaning"): st.write(f"*Definition: {data['meaning']}*")
             guess = st.text_input("Type the word:").strip()
             
@@ -170,11 +169,6 @@ def main():
 
         st.markdown("</div>", unsafe_allow_html=True)
         
-        # Victory/Badge logic
-        if st.session_state.streak == 10:
-            st.balloons()
-            st.audio(VICTORY_SOUND, format="audio/mp3", autoplay=True)
-
         if st.session_state.feedback:
             st.divider()
             st.info(st.session_state.feedback)
@@ -182,10 +176,7 @@ def main():
             st.success(f"Rank: {badge}")
 
         if st.button("🏠 Home Menu"):
-            st.session_state.game_mode = None
-            st.session_state.current_data = None
-            st.session_state.feedback = None
-            st.session_state.streak = 0
+            st.session_state.update({"game_mode": None, "current_data": None, "feedback": None, "streak": 0})
             st.rerun()
 
 if __name__ == "__main__":
