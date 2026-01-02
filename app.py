@@ -5,10 +5,13 @@ import random
 import io
 import os
 import json
+import base64
 
 # --- CONFIG ---
-PAGE_LOGO = "535a00a0-0968-491d-92db-30c32ced7ac6.webp" 
-FRIENDS_POSTER_URL = "https://images.fineartamerica.com/images/artworkimages/mediumlarge/3/1-friends-tv-show-poster-mariah-dahl.jpg"
+# Ensure these filenames match exactly what you have in your GitHub folder
+INITIAL_LOGO = "image_923a6b.png"  # Your initial baby photo logo
+FRIENDS_BG = "image_923a6b.png"    # Used as background for the quiz
+PAGE_LOGO_ICON = "535a00a0-0968-491d-92db-30c32ced7ac6.webp" 
 
 BADGES = {5: "🥉 Bronze Achu", 10: "🥈 Silver Achu", 15: "🥇 Gold Achu", 20: "💎 Diamond Queen"}
 
@@ -18,6 +21,11 @@ if "GEMINI_API_KEY" in st.secrets:
 else:
     st.error("Missing API Key!")
     st.stop()
+
+def get_base64_of_bin_file(bin_file):
+    with open(bin_file, 'rb') as f:
+        data = f.read()
+    return base64.b64encode(data).decode()
 
 # --- DYNAMIC CONTENT GENERATORS ---
 def get_dynamic_friends_q(streak):
@@ -33,6 +41,7 @@ def get_dynamic_word(streak):
     return json.loads(response.text.replace('```json', '').replace('```', ''))
 
 def main():
+    # Set the browser tab icon
     st.set_page_config(page_title="Achus Game App", page_icon="🎮")
     
     if "game_mode" not in st.session_state:
@@ -48,9 +57,13 @@ def main():
     card_color = "rgba(255, 255, 255, 0.05)"
 
     if st.session_state.game_mode == "friends":
-        bg_style = f"background-image: linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.7)), url('{FRIENDS_POSTER_URL}'); background-size: cover; background-attachment: fixed;"
+        try:
+            bin_str = get_base64_of_bin_file(FRIENDS_BG)
+            bg_style = f"background-image: linear-gradient(rgba(0,0,0,0.8), rgba(0,0,0,0.8)), url('data:image/png;base64,{bin_str}'); background-size: cover; background-attachment: fixed;"
+        except:
+            bg_style = "background-color: #240b36;"
         accent = "linear-gradient(135deg, #6b2d5c 0%, #f0a202 100%)"
-        card_color = "rgba(0, 0, 0, 0.85)"
+        card_color = "rgba(0, 0, 0, 0.9)"
     elif st.session_state.game_mode == "spellbee":
         bg_style = "background-color: #1a1a1a;"
         accent = "linear-gradient(135deg, #fbc02d 0%, #000000 100%)"
@@ -59,48 +72,86 @@ def main():
     st.markdown(f"""
         <style>
         .stApp {{ {bg_style} }}
-        .big-title {{ font-size: 40px !important; font-weight: 700; color: white; text-align: center; }}
-        .game-card {{ background: {card_color}; padding: 25px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(10px); color: white; }}
+        .big-title {{ font-size: 42px !important; font-weight: 700; color: white; text-align: center; margin-bottom: 20px; }}
+        .game-card {{ background: {card_color}; padding: 30px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(10px); color: white; }}
         .stButton>button {{ border-radius: 12px; background: {accent}; color: white !important; font-weight: bold; border: none; height: 3.5em; width: 100%; }}
         .streak-container {{ background: rgba(0,0,0,0.6); padding: 12px; border-radius: 15px; display: flex; justify-content: space-between; border: 1px solid gold; margin-bottom: 20px; color: gold; font-weight: bold; }}
-        /* Small screen adjustments for iPhone */
-        @media (max-width: 600px) {{
-            .big-title {{ font-size: 30px !important; }}
-        }}
         </style>
         """, unsafe_allow_html=True)
 
+    # --- TOP HEADER ---
     st.markdown('<p class="big-title">Achus Game App</p>', unsafe_allow_html=True)
 
+    # --- HOME PAGE (Selection Menu) ---
     if not st.session_state.game_mode:
-        st.write("### What does Achumol want to play?")
-        if st.button("☕ Friends Series Quiz"):
-            st.session_state.game_mode = "friends"
-            st.rerun()
-        if st.button("🐝 Spell Bee Challenge"):
-            st.session_state.game_mode = "spellbee"
-            st.rerun()
+        # Show the Baby Photo Logo ONLY on Home Page
+        if os.path.exists(INITIAL_LOGO):
+            col_l, col_r = st.columns([1, 1])
+            with col_l:
+                st.image(INITIAL_LOGO, width=180)
+            with col_r:
+                st.write("### What does Achumol want to play?")
+                if st.button("☕ Friends Series Quiz"):
+                    st.session_state.game_mode = "friends"
+                    st.rerun()
+                if st.button("🐝 Spell Bee Challenge"):
+                    st.session_state.game_mode = "spellbee"
+                    st.rerun()
+        else:
+            st.write("### What does Achumol want to play?")
+            if st.button("☕ Friends Series Quiz"):
+                st.session_state.game_mode = "friends"
+                st.rerun()
+            if st.button("🐝 Spell Bee Challenge"):
+                st.session_state.game_mode = "spellbee"
+                st.rerun()
+    
+    # --- GAME PLAY AREA ---
     else:
         st.markdown(f'<div class="streak-container"><span>🔥 Streak: {st.session_state.streak}</span><span>🏆 Best: {st.session_state.max_streak}</span></div>', unsafe_allow_html=True)
         st.markdown("<div class='game-card'>", unsafe_allow_html=True)
 
-        if st.session_state.game_mode == "spellbee":
+        if st.session_state.game_mode == "friends":
+            if not st.session_state.current_data:
+                st.session_state.current_data = get_dynamic_friends_q(st.session_state.streak)
+                st.session_state.show_hint = False
+            
+            data = st.session_state.current_data
+            st.write(f"#### Question {st.session_state.q_count + 1}")
+            st.write(f"**{data['question']}**")
+            choice = st.radio("Options:", data['options'], index=None)
+            
+            if st.session_state.q_count >= st.session_state.next_hint_available:
+                if st.button("💡 Use Hint"):
+                    st.session_state.show_hint = True
+                    st.session_state.next_hint_available = st.session_state.q_count + 5
+                if st.session_state.show_hint: st.info(data['hint'])
+            
+            if st.button("Submit Answer"):
+                if choice == data['answer']:
+                    st.session_state.streak += 1
+                    st.session_state.max_streak = max(st.session_state.streak, st.session_state.max_streak)
+                    st.session_state.q_count += 1
+                    st.session_state.feedback = f"✅ Correct! {model.generate_content('Short Friends-themed romantic praise.').text}"
+                else:
+                    st.session_state.streak = 0
+                    st.session_state.feedback = f"❌ Incorrect! It was {data['answer']}."
+                st.session_state.current_data = None
+                st.rerun()
+
+        elif st.session_state.game_mode == "spellbee":
             if not st.session_state.current_data:
                 st.session_state.current_data = get_dynamic_word(st.session_state.streak)
             
             data = st.session_state.current_data
-            
-            # Male Indian English simulation
             tts = gTTS(text=data['word'], lang='en', tld='co.in')
             fp = io.BytesIO()
             tts.write_to_fp(fp)
             
             st.write("🔊 Listen carefully:")
-            st.audio(fp, format='audio/mp3')
+            st.audio(fp, format='audio/wav')
             
-            # iOS/Opera Fix: Manual Refresh button for audio
-            if st.button("🔄 Reload Audio (If it doesn't play)"):
-                st.rerun()
+            if st.button("🔄 Reload Audio"): st.rerun()
 
             if st.checkbox("Show Meaning"): st.write(f"*Definition: {data['meaning']}*")
             guess = st.text_input("Type the word:").strip()
@@ -116,11 +167,17 @@ def main():
                 st.session_state.current_data = None
                 st.rerun()
 
-        # ... (Rest of Friends Game remains same)
+        st.markdown("</div>", unsafe_allow_html=True)
+        
+        if st.session_state.feedback:
+            st.divider()
+            st.info(st.session_state.feedback)
+            badge = next((b for s, b in reversed(list(BADGES.items())) if st.session_state.max_streak >= s), "🌱 Rookie")
+            st.success(f"Rank: {badge}")
 
-    if st.button("🏠 Home Menu"):
-        st.session_state.update({"game_mode": None, "current_data": None, "feedback": None})
-        st.rerun()
+        if st.button("🏠 Home Menu"):
+            st.session_state.update({"game_mode": None, "current_data": None, "feedback": None, "streak": 0})
+            st.rerun()
 
 if __name__ == "__main__":
     main()
