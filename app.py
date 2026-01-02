@@ -1,15 +1,13 @@
 import streamlit as st
 import google.generativeai as genai
-from gtts import gTTS
 import random
-import io
-import os
 import json
 import base64
+import os
 
 # --- CONFIG ---
-INITIAL_LOGO = "images (2).jpg" # Updated based on your file list
-FRIENDS_BG = "images (2).jpg"   # Updated based on your file list
+# Using the filename from your uploaded files
+FRIENDS_BG = "images (2).jpg" 
 VICTORY_SOUND = "https://www.myinstants.com/media/sounds/crowd-cheer.mp3"
 
 if "GEMINI_API_KEY" in st.secrets:
@@ -21,130 +19,147 @@ else:
 
 def get_base64_of_bin_file(bin_file):
     try:
-        with open(bin_file, 'rb') as f:
-            data = f.read()
-        return base64.b64encode(data).decode()
+        if os.path.exists(bin_file):
+            with open(bin_file, 'rb') as f:
+                data = f.read()
+            return base64.b64encode(data).decode()
     except:
         return ""
+    return ""
 
 def clean_json_response(text):
     text = text.replace("```json", "").replace("```", "").strip()
     return text
 
 def get_manglish_comment(is_correct):
+    """Generates a funny Manglish praise or troll."""
     if is_correct:
-        comments = ["Kidiloski! Nee puliyaanu kutto.", "Enna oru buddhi! Achu mass!", "Correct aanu! Pinne alla! 🔥"]
+        comments = [
+            "Kidiloski! Nee puliyaanu kutto. 🔥", 
+            "Enna oru buddhi! Achu mass aanu!", 
+            "Correct aanu! Pinne alla!",
+            "Sambaar alla, ithu vere level logic!"
+        ]
     else:
-        comments = ["Ente ponno... poya buddhi pullu kootil! 😂", "Kashtam! Ithu ethu lokathu nina?", "Sathyam para, thookam varunundo?"]
+        comments = [
+            "Ente ponno... poya buddhi pullu kootil! 😂", 
+            "Kashtam! Ithu ethu lokathu nina?", 
+            "Sathyam para, thookam varunundo?",
+            "Oru logicum illallo mwole!"
+        ]
     return random.choice(comments)
 
 def get_dynamic_friends_q(streak):
     difficulty = "Easy" if streak < 4 else "Intermediate" if streak < 8 else "Very Hard"
-    prompt = f"Generate a unique {difficulty} difficulty MCQ about FRIENDS. Return ONLY a JSON object with keys: 'question', 'options' (list of 4), 'answer', 'hint'. No markdown."
-    response = model.generate_content(prompt)
-    return json.loads(clean_json_response(response.text))
-
-def get_dynamic_word(streak):
-    # PROGRESSIVE DIFFICULTY
-    if streak < 3: diff = "Common/Easy"
-    elif streak < 7: diff = "Medium/Tricky"
-    else: diff = "Complex/Hard"
-    
-    prompt = f"Generate one {diff} English word for a spelling bee. Return ONLY a JSON object with keys: 'word', 'meaning'. No markdown."
+    prompt = f"Generate a unique {difficulty} difficulty MCQ about the TV show FRIENDS. Return ONLY a JSON object with keys: 'question', 'options' (list of 4), 'answer', 'hint'. No markdown."
     response = model.generate_content(prompt)
     return json.loads(clean_json_response(response.text))
 
 def main():
-    st.set_page_config(page_title="Achus Game App", page_icon="🎮")
+    st.set_page_config(page_title="Achus Friends Quiz", page_icon="☕", layout="centered")
     
-    if "game_mode" not in st.session_state:
+    if "streak" not in st.session_state:
         st.session_state.update({
-            "game_mode": None, "streak": 0, "max_streak": 0, 
-            "current_data": None, "feedback_msg": None, "comment": None
+            "streak": 0, "max_streak": 0, "current_data": None, 
+            "feedback_msg": None, "comment": None
         })
 
-    # --- DYNAMIC STYLING ---
+    # --- MOBILE COMPATIBLE BACKGROUND STYLING ---
     bin_str = get_base64_of_bin_file(FRIENDS_BG)
-    bg_style = f"background-image: linear-gradient(rgba(0,0,0,0.8), rgba(0,0,0,0.8)), url('data:image/png;base64,{bin_str}'); background-size: cover;" if bin_str else "background-color: #0e1117;"
-
-    st.markdown(f"""
+    bg_css = f"""
         <style>
-        .stApp {{ {bg_style} }}
-        .game-card {{ background: rgba(0, 0, 0, 0.85); padding: 25px; border-radius: 15px; border: 1px solid #444; color: white; }}
-        .stButton>button {{ border-radius: 10px; font-weight: bold; height: 3em; }}
-        .comment-text {{ color: #ffeb3b; font-style: italic; font-size: 1.1em; }}
-        </style>
-        """, unsafe_allow_html=True)
-
-    st.markdown("<h1 style='text-align: center; color: white;'>Achus Game App</h1>", unsafe_allow_html=True)
-
-    if st.session_state.game_mode is None:
-        col1, col2 = st.columns(2)
-        with col1: st.button("☕ Friends Quiz", on_click=lambda: st.session_state.update({"game_mode": "friends"}))
-        with col2: st.button("🐝 Spell Bee", on_click=lambda: st.session_state.update({"game_mode": "spellbee"}))
-    
-    else:
-        # Show stats
-        st.info(f"🔥 Streak: {st.session_state.streak} | 🏆 Best: {st.session_state.max_streak}")
+        .stApp {{
+            background-image: linear-gradient(rgba(0,0,0,0.75), rgba(0,0,0,0.75)), url('data:image/png;base64,{bin_str}');
+            background-size: cover;
+            background-position: center center;
+            background-attachment: fixed;
+            background-repeat: no-repeat;
+        }}
         
-        # --- GAME LOGIC ---
-        if st.session_state.current_data is None:
-            if st.session_state.game_mode == "spellbee":
-                st.session_state.current_data = get_dynamic_word(st.session_state.streak)
+        /* Ensure card fits phone screens well */
+        .game-card {{
+            background: rgba(0, 0, 0, 0.85); 
+            padding: 20px; 
+            border-radius: 15px; 
+            border: 1px solid #444; 
+            color: white;
+            margin-top: 10px;
+        }}
+
+        .stButton>button {{
+            border-radius: 10px;
+            font-weight: bold;
+            width: 100%;
+            height: 3.5em;
+            background: linear-gradient(135deg, #6b2d5c 0%, #f0a202 100%);
+            color: white !important;
+            border: none;
+        }}
+        
+        .comment-text {{
+            color: #ffeb3b; 
+            font-style: italic; 
+            font-size: 1.2em; 
+            text-align: center;
+            margin-top: 15px;
+        }}
+        </style>
+    """
+    st.markdown(bg_css, unsafe_allow_html=True)
+
+    st.markdown("<h1 style='text-align: center; color: white;'>☕ Achus Friends Quiz</h1>", unsafe_allow_html=True)
+
+    # Display Stats
+    st.markdown(f"""
+        <div style='display: flex; justify-content: space-around; background: rgba(255,255,255,0.1); padding: 10px; border-radius: 10px; color: gold; font-weight: bold; margin-bottom: 10px;'>
+            <span>🔥 Streak: {st.session_state.streak}</span>
+            <span>🏆 Best: {st.session_state.max_streak}</span>
+        </div>
+    """, unsafe_allow_html=True)
+
+    # --- GAME LOGIC ---
+    if st.session_state.current_data is None:
+        with st.spinner("Fetching new question..."):
+            st.session_state.current_data = get_dynamic_friends_q(st.session_state.streak)
+
+    data = st.session_state.current_data
+
+    st.markdown("<div class='game-card'>", unsafe_allow_html=True)
+    st.write(f"### {data['question']}")
+    
+    # Use key based on streak to reset radio buttons automatically
+    ans = st.radio("Pick the correct answer:", data['options'], index=None, key=f"q_{st.session_state.streak}")
+    
+    if st.button("Submit Answer"):
+        if ans is None:
+            st.warning("Please select an option first!")
+        else:
+            if ans == data['answer']:
+                st.session_state.streak += 1
+                st.session_state.max_streak = max(st.session_state.streak, st.session_state.max_streak)
+                st.session_state.feedback_msg = ("success", "✅ Correct! You're a true fan.")
+                st.session_state.comment = get_manglish_comment(True)
             else:
-                st.session_state.current_data = get_dynamic_friends_q(st.session_state.streak)
-
-        data = st.session_state.current_data
-
-        with st.container():
-            st.markdown("<div class='game-card'>", unsafe_allow_html=True)
+                st.session_state.streak = 0
+                st.session_state.feedback_msg = ("error", f"❌ Wrong! Correct answer: {data['answer']}")
+                st.session_state.comment = get_manglish_comment(False)
             
-            if st.session_state.game_mode == "spellbee":
-                tts = gTTS(text=data['word'], lang='en', tld='co.in')
-                fp = io.BytesIO(); tts.write_to_fp(fp)
-                st.audio(fp, format='audio/wav')
-                if st.checkbox("Need Meaning?"): st.caption(data['meaning'])
-                
-                user_input = st.text_input("Spell it:", key="spell_in").strip()
-                if st.button("Check"):
-                    if user_input.lower() == data['word'].lower():
-                        st.session_state.streak += 1
-                        st.session_state.feedback_msg = ("success", f"Correct! It was {data['word']}")
-                        st.session_state.comment = get_manglish_comment(True)
-                    else:
-                        st.session_state.streak = 0
-                        st.session_state.feedback_msg = ("error", f"Wrong! The word was {data['word']}")
-                        st.session_state.comment = get_manglish_comment(False)
-                    st.session_state.current_data = None # Reset for next word
-                    st.rerun()
-
-            else: # Friends Quiz
-                st.write(f"### {data['question']}")
-                ans = st.radio("Pick one:", data['options'], index=None)
-                if st.button("Submit"):
-                    if ans == data['answer']:
-                        st.session_state.streak += 1
-                        st.session_state.feedback_msg = ("success", "Correct Answer!")
-                        st.session_state.comment = get_manglish_comment(True)
-                    else:
-                        st.session_state.streak = 0
-                        st.session_state.feedback_msg = ("error", f"Wrong! Correct: {data['answer']}")
-                        st.session_state.comment = get_manglish_comment(False)
-                    st.session_state.current_data = None
-                    st.rerun()
-
-            st.markdown("</div>", unsafe_allow_html=True)
-
-        # Show Feedback from previous turn
-        if st.session_state.feedback_msg:
-            type, msg = st.session_state.feedback_msg
-            if type == "success": st.success(msg)
-            else: st.error(msg)
-            st.markdown(f"<p class='comment-text'>{st.session_state.comment}</p>", unsafe_allow_html=True)
-
-        if st.button("🏠 Exit to Menu"):
-            st.session_state.update({"game_mode": None, "current_data": None, "streak": 0, "feedback_msg": None})
+            st.session_state.current_data = None # This triggers a new question on rerun
             st.rerun()
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    # Show Feedback
+    if st.session_state.feedback_msg:
+        msg_type, msg_text = st.session_state.feedback_msg
+        if msg_type == "success":
+            st.success(msg_text)
+        else:
+            st.error(msg_text)
+        st.markdown(f"<p class='comment-text'>{st.session_state.comment}</p>", unsafe_allow_html=True)
+
+    # Celebrate milestones
+    if st.session_state.streak > 0 and st.session_state.streak % 5 == 0:
+        st.balloons()
 
 if __name__ == "__main__":
     main()
