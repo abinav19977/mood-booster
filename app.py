@@ -11,7 +11,6 @@ LOGO_FILE = "535a00a0-0968-491d-92db-30c32ced7ac6.webm"
 
 if "GEMINI_API_KEY" in st.secrets:
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-    # Using 2.0 Flash for fast persona responses
     model = genai.GenerativeModel('gemini-2.0-flash')
 else:
     st.error("Missing API Key!")
@@ -34,33 +33,31 @@ def get_manglish_comment(is_correct):
                ["Ente ponno... poya buddhi pullu kootil! 😂", "Kashtam! Ithu ethu lokathu nina?", "Oru logicum illallo mwole!"]
     return random.choice(comments)
 
-# --- AI LOGIC ---
-def get_dynamic_friends_q(streak):
-    prompt = f"Generate a unique MCQ about FRIENDS (Difficulty level based on streak: {streak}). Return ONLY a JSON object with keys: 'question', 'options' (list of 4), 'answer', 'hint'."
-    response = model.generate_content(prompt)
-    return json.loads(clean_json_response(response.text))
-
+# --- AI PERSONA ENGINE ---
 def get_scenario_response(scenario):
     prompt = f"""
-    A user has this dilemma: '{scenario}'. 
-    Provide a roundtable discussion where:
-    - Chandler uses heavy sarcasm.
-    - Joey relates it to food or says 'How you doin?'.
-    - Phoebe mentions a past life or something whimsical.
-    - Ross 'Ross-a-trons' the logic or facts.
-    Keep it conversational and short.
+    Dilemma: '{scenario}'. 
+    Generate a roundtable discussion:
+    - Chandler: Uses extreme sarcasm ("Could I BE any more...").
+    - Joey: Mentions sandwiches, pizza, or says 'How you doin?'.
+    - Phoebe: Mentions a past life or a street-smart story.
+    - Ross: 'Ross-a-trons' the situation by correcting grammar or a small detail.
     """
-    response = model.generate_content(prompt)
-    return response.text
+    return model.generate_content(prompt).text
+
+def get_lost_episode(prompt_text):
+    prompt = f"Write a short script for a lost FRIENDS episode titled '{prompt_text}'. Include scene descriptions and funny dialogue for the main cast."
+    return model.generate_content(prompt).text
+
+def get_ross_fact_check(fact):
+    prompt = f"The user says: '{fact}'. Respond as Ross Geller. If they are wrong, correct them pedantically. If they are right, say 'Fine, but you forgot one minor detail...' and add an obscure fact."
+    return model.generate_content(prompt).text
 
 def main():
     st.set_page_config(page_title="Achu's Friends App", page_icon="☕", layout="centered")
     
     if "session" not in st.session_state:
-        st.session_state.update({
-            "session": "menu", "streak": 0, "max_streak": 0, 
-            "current_data": None, "feedback_msg": None, "comment": None
-        })
+        st.session_state.update({"session": "menu", "streak": 0, "max_streak": 0, "current_data": None})
 
     # --- CSS STYLING ---
     bg_str = get_base64_of_bin_file(FRIENDS_BG)
@@ -76,7 +73,6 @@ def main():
         .main-title {{ color: white; font-size: 28px; font-weight: bold; margin: 0; }}
         .game-card {{ background: rgba(0, 0, 0, 0.85); padding: 20px; border-radius: 15px; border: 1px solid #444; color: white; margin-bottom: 10px; }}
         .stButton>button {{ border-radius: 10px; font-weight: bold; width: 100%; background: linear-gradient(135deg, #6b2d5c 0%, #f0a202 100%); color: white !important; height: 3.5em; border: none; }}
-        .comment-text {{ color: #ffeb3b; font-style: italic; text-align: center; }}
         </style>
         <div class="header-container">
             <img src="data:image/png;base64,{logo_str}" class="logo-img">
@@ -84,14 +80,14 @@ def main():
         </div>
     """, unsafe_allow_html=True)
 
-    # --- MENU SESSION ---
+    # --- NAVIGATION ---
     if st.session_state.session == "menu":
         st.markdown("<div class='game-card'>", unsafe_allow_html=True)
-        st.write("### Welcome, Achu! Choose your session:")
-        if st.button("🏆 Start Friends Quiz"):
+        st.write("### Choose Your Session, Achumol!")
+        if st.button("🏆 Series Trivia Quiz"):
             st.session_state.session = "quiz"
             st.rerun()
-        if st.button("🎭 Scenario Planner (The Roundtable)"):
+        if st.button("🎭 Scenario Planner & Persona Engine"):
             st.session_state.session = "scenario"
             st.rerun()
         st.markdown("</div>", unsafe_allow_html=True)
@@ -99,64 +95,52 @@ def main():
     # --- QUIZ SESSION ---
     elif st.session_state.session == "quiz":
         st.info(f"🔥 Streak: {st.session_state.streak} | 🏆 Best: {st.session_state.max_streak}")
-        
         if st.session_state.current_data is None:
-            st.session_state.current_data = get_dynamic_friends_q(st.session_state.streak)
-
+            prompt = "Generate a FRIENDS MCQ. Return ONLY JSON: {'question','options','answer','hint'}."
+            st.session_state.current_data = json.loads(clean_json_response(model.generate_content(prompt).text))
+        
         data = st.session_state.current_data
         st.markdown("<div class='game-card'>", unsafe_allow_html=True)
         st.write(f"**Question:** {data['question']}")
-        ans = st.radio("Choose:", data['options'], index=None, key=f"q_{st.session_state.streak}")
-        
+        ans = st.radio("Pick one:", data['options'], index=None, key=f"q_{st.session_state.streak}")
         if st.button("Submit"):
             if ans == data['answer']:
                 st.session_state.streak += 1
-                st.session_state.max_streak = max(st.session_state.streak, st.session_state.max_streak)
-                st.session_state.feedback_msg = ("success", "Correct!")
-                st.session_state.comment = get_manglish_comment(True)
+                st.success("Correct! " + get_manglish_comment(True))
             else:
                 st.session_state.streak = 0
-                st.session_state.feedback_msg = ("error", f"Wrong! Correct: {data['answer']}")
-                st.session_state.comment = get_manglish_comment(False)
+                st.error(f"Wrong! {get_manglish_comment(False)} It was {data['answer']}")
             st.session_state.current_data = None
             st.rerun()
         st.markdown("</div>", unsafe_allow_html=True)
-        
-        if st.session_state.feedback_msg:
-            t, m = st.session_state.feedback_msg
-            st.success(m) if t == "success" else st.error(m)
-            st.markdown(f"<p class='comment-text'>\"{st.session_state.comment}\"</p>", unsafe_allow_html=True)
-        
-        if st.button("🏠 Back to Menu"):
-            st.session_state.session = "menu"
-            st.rerun()
+        if st.button("🏠 Menu"): st.session_state.session = "menu"; st.rerun()
 
-    # --- SCENARIO PLANNER SESSION ---
+    # --- SCENARIO PLANNER & PERSONA ENGINE ---
     elif st.session_state.session == "scenario":
-        st.markdown("<div class='game-card'>", unsafe_allow_html=True)
-        st.write("### 🥪 The 'What Should I Do?' Column")
-        st.write("Upload your dilemma and let the gang debate it.")
-        user_scenario = st.text_area("Example: I accidentally ate my roommate's sandwich...", placeholder="Type your problem here...")
+        tab1, tab2, tab3 = st.tabs(["🥪 Advice Column", "🎬 Lost Episodes", "🦖 Ross-a-Tron"])
         
-        if st.button("Let the Gang Debate!"):
-            if user_scenario:
-                with st.spinner("Chandler is writing sarcasm..."):
-                    response = get_scenario_response(user_scenario)
-                    st.session_state.scenario_result = response
-            else:
-                st.warning("Para mwole, what happened?")
-        
-        if "scenario_result" in st.session_state:
-            st.write("---")
-            st.markdown(st.session_state.scenario_result)
-            st.info("Ross: 'Actually, it's not a dilemma, it's a social transgression!'")
-            
-        st.markdown("</div>", unsafe_allow_html=True)
-        
-        if st.button("🏠 Back to Menu"):
-            if "scenario_result" in st.session_state: del st.session_state.scenario_result
-            st.session_state.session = "menu"
-            st.rerun()
+        with tab1:
+            st.markdown("<div class='game-card'>", unsafe_allow_html=True)
+            dilemma = st.text_input("Tell the gang your problem:")
+            if st.button("Get Advice"):
+                st.write(get_scenario_response(dilemma))
+            st.markdown("</div>", unsafe_allow_html=True)
+
+        with tab2:
+            st.markdown("<div class='game-card'>", unsafe_allow_html=True)
+            idea = st.text_input("The One Where...", placeholder="Ross joins a heavy metal band")
+            if st.button("Generate Script"):
+                st.write(get_lost_episode(idea))
+            st.markdown("</div>", unsafe_allow_html=True)
+
+        with tab3:
+            st.markdown("<div class='game-card'>", unsafe_allow_html=True)
+            fact = st.text_input("State a Friends fact to Ross:")
+            if st.button("Check Fact"):
+                st.write(get_ross_fact_check(fact))
+            st.markdown("</div>", unsafe_allow_html=True)
+
+        if st.button("🏠 Menu"): st.session_state.session = "menu"; st.rerun()
 
 if __name__ == "__main__":
     main()
