@@ -9,9 +9,8 @@ import base64
 
 # --- CONFIG ---
 # Ensure these filenames match exactly what you have in your GitHub folder
-INITIAL_LOGO = "image_923a6b.png"  # Your initial baby photo logo
-FRIENDS_BG = "image_923a6b.png"    # Used as background for the quiz
-PAGE_LOGO_ICON = "535a00a0-0968-491d-92db-30c32ced7ac6.webp" 
+INITIAL_LOGO = "image_923a6b.png"  # The Baby Photo Logo
+FRIENDS_BG = "image_923a6b.png"    # Background for Friends Quiz
 
 BADGES = {5: "🥉 Bronze Achu", 10: "🥈 Silver Achu", 15: "🥇 Gold Achu", 20: "💎 Diamond Queen"}
 
@@ -41,7 +40,6 @@ def get_dynamic_word(streak):
     return json.loads(response.text.replace('```json', '').replace('```', ''))
 
 def main():
-    # Set the browser tab icon
     st.set_page_config(page_title="Achus Game App", page_icon="🎮")
     
     if "game_mode" not in st.session_state:
@@ -79,16 +77,14 @@ def main():
         </style>
         """, unsafe_allow_html=True)
 
-    # --- TOP HEADER ---
     st.markdown('<p class="big-title">Achus Game App</p>', unsafe_allow_html=True)
 
     # --- HOME PAGE (Selection Menu) ---
     if not st.session_state.game_mode:
-        # Show the Baby Photo Logo ONLY on Home Page
         if os.path.exists(INITIAL_LOGO):
             col_l, col_r = st.columns([1, 1])
             with col_l:
-                st.image(INITIAL_LOGO, width=180)
+                st.image(INITIAL_LOGO, width=220) # Logo displayed here
             with col_r:
                 st.write("### What does Achumol want to play?")
                 if st.button("☕ Friends Series Quiz"):
@@ -97,14 +93,6 @@ def main():
                 if st.button("🐝 Spell Bee Challenge"):
                     st.session_state.game_mode = "spellbee"
                     st.rerun()
-        else:
-            st.write("### What does Achumol want to play?")
-            if st.button("☕ Friends Series Quiz"):
-                st.session_state.game_mode = "friends"
-                st.rerun()
-            if st.button("🐝 Spell Bee Challenge"):
-                st.session_state.game_mode = "spellbee"
-                st.rerun()
     
     # --- GAME PLAY AREA ---
     else:
