@@ -30,126 +30,90 @@ def clean_json_response(text):
 
 def get_manglish_comment(is_correct):
     if is_correct:
-        comments = ["Kidiloski! Nee puliyaanu kutto. 🔥", "Enna oru buddhi! Achu mass!", "Correct aanu! Pinne alla!"]
+        comments = ["Kidiloski! Physio puliyaanu kutto. 🔥", "Enna oru clinic sense! Achu mass!", "Correct aanu! Pinne alla!"]
     else:
-        comments = ["Ente ponno... poya buddhi pullu kootil! 😂", "Kashtam! Ithu ethu lokathu nina?", "Oru logicum illallo mwole!"]
+        comments = ["Ente ponno... poya buddhi BD Chaurasia-il illa! 😂", "Kashtam! Ithu ethu nerve aanu mwole?", "Sathyam para, thookam varunundo?"]
     return random.choice(comments)
 
-def get_scenario_response(scenario):
-    prompt = f"Dilemma: '{scenario}'. Roundtable with Chandler, Joey, Phoebe, Ross. Respond in Manglish if the prompt is Manglish."
-    return model.generate_content(prompt).text
+# --- AI GENERATION ---
+def get_anatomy_data(mode, topic, streak):
+    if mode == "general":
+        prompt = f"Topic: {topic}. Generate a BD Chaurasia style MCQ. Return ONLY JSON: {{'question','options','answer','explanation','link'}}. Difficulty: {'Easy' if streak < 5 else 'Hard'}."
+    else:
+        prompt = f"Topic: {topic}. Generate a Physiotherapy Clinical Scenario (e.g., patient with winged scapula or foot drop). Return ONLY JSON: {{'question','options','answer','explanation','link'}}. Ensure options are clinical diagnoses or muscle tests."
+    
+    response = model.generate_content(prompt)
+    return json.loads(clean_json_response(response.text))
 
 def main():
-    st.set_page_config(page_title="Achu's Friends App", page_icon="☕", layout="centered")
+    st.set_page_config(page_title="Achu's Anatomy Lab", page_icon="🧬", layout="centered")
     
     if "session" not in st.session_state:
         st.session_state.update({
-            "session": "menu", "streak": 0, "max_streak": 0, 
-            "current_data": None, "quiz_feedback": None,
-            "hints_used": 0, "next_hint_at": 0, "show_hint": False
+            "session": "menu", "game_mode": None, "streak": 0, "total_score": 0,
+            "current_data": None, "quiz_feedback": None, "topic": None
         })
 
     # --- CSS & HEADER ---
     bg_str = get_base64_of_bin_file(FRIENDS_BG)
     logo_str = get_base64_of_bin_file(LOGO_FILE)
-    
     st.markdown(f"""
         <style>
         .stApp {{
-            background-image: linear-gradient(rgba(0,0,0,0.8), rgba(0,0,0,0.8)), url('data:image/png;base64,{bg_str}');
+            background-image: linear-gradient(rgba(0,0,0,0.88), rgba(0,0,0,0.88)), url('data:image/png;base64,{bg_str}');
             background-size: cover; background-position: center; background-attachment: fixed;
         }}
         .header-container {{ display: flex; flex-direction: column; align-items: center; margin-bottom: 20px; }}
-        .logo-video {{ width: 100%; max-width: 220px; height: auto; }}
-        .main-title {{ color: white; font-size: 30px; font-weight: bold; text-align: center; }}
-        .game-card {{ background: rgba(0, 0, 0, 0.85); padding: 20px; border-radius: 15px; border: 1px solid #444; color: white; margin-bottom: 10px; }}
-        .stButton>button {{ border-radius: 10px; font-weight: bold; width: 100%; background: linear-gradient(135deg, #6b2d5c 0%, #f0a202 100%); color: white !important; height: 3.5em; border: none; }}
-        .hint-btn>div>button {{ background: #444 !important; height: 2.5em !important; font-size: 0.9em !important; }}
-        .comment-box {{ color: #ffeb3b; font-style: italic; font-size: 1.2em; text-align: center; margin-top: 10px; }}
+        .logo-video {{ width: 100%; max-width: 180px; height: auto; }}
+        .main-title {{ color: white; font-size: 28px; font-weight: bold; text-align: center; }}
+        .game-card {{ background: rgba(0, 0, 0, 0.9); padding: 20px; border-radius: 15px; border: 1px solid #00d4ff; color: white; }}
+        .stButton>button {{ border-radius: 10px; font-weight: bold; width: 100%; background: linear-gradient(135deg, #005f73 0%, #0a9396 100%); color: white !important; height: 3.5em; border: none; }}
+        .achievement-tag {{ background: #ffd700; color: black; padding: 5px; border-radius: 5px; font-weight: bold; text-align: center; margin-bottom: 10px; }}
         </style>
         
         <div class="header-container">
-            <video class="logo-video" autoplay loop muted playsinline>
-                <source src="data:video/webm;base64,{logo_str}" type="video/webm">
-            </video>
-            <h1 class="main-title">Achu's Friends App</h1>
+            <video class="logo-video" autoplay loop muted playsinline><source src="data:video/webm;base64,{logo_str}" type="video/webm"></video>
+            <h1 class="main-title">Achu's Anatomy & Physio Lab</h1>
         </div>
     """, unsafe_allow_html=True)
 
     # --- MENU ---
     if st.session_state.session == "menu":
         st.markdown("<div class='game-card'>", unsafe_allow_html=True)
-        if st.button("🏆 Start Friends Quiz"):
+        st.write("### Select Your Specialization:")
+        mode = st.radio("Choose Game Mode:", ["General BD Chaurasia Quiz", "Physiotherapist Scenario Player"], index=0)
+        topic = st.selectbox("Select System:", ["Upper Limb", "Lower Limb", "Thorax", "Head & Neck", "Neuroanatomy"])
+        
+        if st.button("Start Session"):
+            st.session_state.game_mode = "general" if "General" in mode else "physio"
+            st.session_state.topic = topic
             st.session_state.session = "quiz"
-            st.rerun()
-        if st.button("🎭 Scenario Planner"):
-            st.session_state.session = "scenario"
             st.rerun()
         st.markdown("</div>", unsafe_allow_html=True)
 
-    # --- QUIZ SESSION ---
+    # --- QUIZ / SCENARIO SESSION ---
     elif st.session_state.session == "quiz":
-        st.info(f"🔥 Streak: {st.session_state.streak} | 🏆 Best: {st.session_state.max_streak}")
-        
+        st.markdown(f"<div style='text-align:center; color:#00d4ff;'><strong>Mode: {'General' if st.session_state.game_mode == 'general' else 'Clinical Physio'}</strong></div>", unsafe_allow_html=True)
+        st.progress(min(st.session_state.streak / 10, 1.0))
+        st.write(f"🔥 Streak: {st.session_state.streak} | 🏆 Score: {st.session_state.total_score}")
+
         if st.session_state.current_data is None and st.session_state.quiz_feedback is None:
-            with st.spinner("Fetching question..."):
-                prompt = "Generate a FRIENDS MCQ. Return ONLY JSON: {'question','options','answer','hint'}."
-                st.session_state.current_data = json.loads(clean_json_response(model.generate_content(prompt).text))
-                st.session_state.show_hint = False # Reset hint for new question
+            st.session_state.current_data = get_anatomy_data(st.session_state.game_mode, st.session_state.topic, st.session_state.streak)
 
         st.markdown("<div class='game-card'>", unsafe_allow_html=True)
         
         if st.session_state.quiz_feedback is None:
             data = st.session_state.current_data
-            st.write(f"### {data['question']}")
-            
-            # --- HINT LOGIC ---
-            if st.session_state.streak >= st.session_state.next_hint_at:
-                if st.button("💡 Use Hint", key="hint_btn"):
-                    st.session_state.show_hint = True
-                    st.session_state.next_hint_at = st.session_state.streak + 5
-            else:
-                remaining = st.session_state.next_hint_at - st.session_state.streak
-                st.caption(f"🔒 Hint locked! Get {remaining} more correct answers to unlock.")
+            st.write(f"#### {st.session_state.topic} Challenge")
+            st.write(f"**{data['question']}**")
 
-            if st.session_state.show_hint:
-                st.warning(f"**Hint:** {data['hint']}")
-
-            ans = st.radio("Choose:", data['options'], index=None, key=f"q_{st.session_state.streak}")
+            ans = st.radio("Diagnostic Choice:", data['options'], index=None, key=f"q_{st.session_state.streak}")
             
-            if st.button("Submit Answer"):
+            if st.button("Confirm Diagnosis"):
                 if ans == data['answer']:
                     st.session_state.streak += 1
-                    st.session_state.max_streak = max(st.session_state.streak, st.session_state.max_streak)
-                    st.session_state.quiz_feedback = ("success", "✅ Correct!", get_manglish_comment(True))
+                    st.session_state.total_score += 15
+                    st.session_state.quiz_feedback = ("success", "✅ Excellent Clinical Reasoning!", get_manglish_comment(True), data['explanation'], data['link'])
                 else:
                     st.session_state.streak = 0
-                    st.session_state.next_hint_at = 0 # Optional: Reset lock on fail or keep it? Keeping it makes it harder.
-                    st.session_state.quiz_feedback = ("error", f"❌ Wrong! It was {data['answer']}", get_manglish_comment(False))
-                st.rerun()
-        else:
-            type, msg, comment = st.session_state.quiz_feedback
-            if type == "success": st.success(msg)
-            else: st.error(msg)
-            st.markdown(f"<p class='comment-box'>\"{comment}\"</p>", unsafe_allow_html=True)
-            
-            if st.button("➡️ Next Question"):
-                st.session_state.quiz_feedback = None
-                st.session_state.current_data = None
-                st.rerun()
-        
-        st.markdown("</div>", unsafe_allow_html=True)
-        if st.button("🏠 Home Menu"): st.session_state.session = "menu"; st.rerun()
-
-    # --- SCENARIO PLANNER ---
-    elif st.session_state.session == "scenario":
-        st.markdown("<div class='game-card'>", unsafe_allow_html=True)
-        st.write("### 🥪 The Roundtable")
-        scenario = st.text_area("What's the dilemma?")
-        if st.button("Ask the Gang"):
-            st.write(get_scenario_response(scenario))
-        st.markdown("</div>", unsafe_allow_html=True)
-        if st.button("🏠 Home Menu"): st.session_state.session = "menu"; st.rerun()
-
-if __name__ == "__main__":
-    main()
+                    st.session_
