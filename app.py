@@ -116,4 +116,24 @@ def main():
                     st.session_state.quiz_feedback = ("success", "✅ Excellent Clinical Reasoning!", get_manglish_comment(True), data['explanation'], data['link'])
                 else:
                     st.session_state.streak = 0
-                    st.session_
+                    st.session_state.quiz_feedback = ("error", f"❌ Misdiagnosis! Correct: {data['answer']}", get_manglish_comment(False), data['explanation'], data['link'])
+                st.rerun()
+        else:
+            type, msg, comment, logic, link = st.session_state.quiz_feedback
+            if type == "success": st.success(msg)
+            else: st.error(msg)
+            
+            st.markdown(f"<p style='color:gold; text-align:center;'><i>{comment}</i></p>", unsafe_allow_html=True)
+            st.write(f"**Logic:** {logic}")
+            st.markdown(f"🔗 [Further Reading on {st.session_state.topic}]({link})")
+            
+            if st.button("Next Case" if st.session_state.game_mode == "physio" else "Next Question"):
+                st.session_state.quiz_feedback = None
+                st.session_state.current_data = None
+                st.rerun()
+        
+        st.markdown("</div>", unsafe_allow_html=True)
+        if st.button("🏠 Quit to Menu"): st.session_state.session = "menu"; st.rerun()
+
+if __name__ == "__main__":
+    main()
