@@ -33,13 +33,11 @@ def get_manglish_comment(is_correct):
 
 # --- AI GENERATION ---
 def get_anatomy_data(mode, topic, difficulty):
-    prompt = f"""
-    Topic: {topic}. Difficulty: {difficulty}. 
-    Mode: {'General BD Chaurasia Quiz' if mode == 'general' else 'Physiotherapy Clinical Scenario'}.
-    Generate a question and return ONLY JSON: 
-    {{'question','options','answer','explanation','link','hint','diagram_query'}}.
-    The 'diagram_query' should be a simple 2-3 word name of the anatomical structure involved (e.g., 'Brachial Plexus' or 'Sciatic Nerve').
-    """
+    if mode == "general":
+        prompt = f"Topic: {topic}. Difficulty: {difficulty}. Generate a BD Chaurasia style MCQ. Return ONLY JSON: {{'question','options','answer','explanation','link','hint'}}."
+    else:
+        prompt = f"Topic: {topic}. Difficulty: {difficulty}. Generate a Physiotherapy Clinical Scenario. Return ONLY JSON: {{'question','options','answer','explanation','link','hint'}}."
+    
     response = model.generate_content(prompt)
     return json.loads(clean_json_response(response.text))
 
@@ -70,7 +68,6 @@ def main():
         .stButton>button {{ border-radius: 10px; font-weight: bold; width: 100%; background: linear-gradient(135deg, #005f73 0%, #0a9396 100%); color: white !important; height: 3.5em; border: none; }}
         .chat-bubble {{ background: rgba(255,255,255,0.1); padding: 10px; border-radius: 10px; margin: 5px 0; border-left: 3px solid #00d4ff; }}
         </style>
-        
         <div class="header-container">
             <video class="logo-video" autoplay muted loop playsinline src="data:video/webm;base64,{logo_str}"></video>
             <h1 style="color:white; text-align:center;">Achu's Anatomy & Physio Lab</h1>
@@ -105,10 +102,6 @@ def main():
             st.write(f"#### {st.session_state.topic} Challenge")
             st.write(f"**Scenario:** {data['question']}")
 
-            # Fixed Visual Aid for Hard Mode
-            if st.session_state.difficulty == "Hard":
-                st.write(f"🔍 **Clinical Reference:** }]")
-
             if st.session_state.game_mode == "physio":
                 st.write("🩺 **Patient Chat:**")
                 for chat in st.session_state.patient_chat:
@@ -141,6 +134,7 @@ def main():
                     st.session_state.quiz_feedback = ("error", f"❌ Wrong! Correct: {data['answer']}", get_manglish_comment(False), data['explanation'], data['link'])
                 st.rerun()
         else:
+            # RENAMED 'type' to 'f_type' to fix AttributeError
             f_type, f_msg, f_comment, f_logic, f_link = st.session_state.quiz_feedback
             if f_type == "success": st.success(f_msg)
             else: st.error(f_msg)
