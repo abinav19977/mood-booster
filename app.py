@@ -33,17 +33,24 @@ def get_manglish_comment(is_correct):
 
 # --- AI GENERATION ---
 def get_anatomy_data(mode, topic, difficulty):
-    if mode == "general":
-        prompt = f"Topic: {topic}. Difficulty: {difficulty}. Generate a BD Chaurasia style MCQ. Return ONLY JSON: {{'question','options','answer','explanation','link','hint'}}."
-    else:
-        prompt = f"Topic: {topic}. Difficulty: {difficulty}. Generate a Physiotherapy Clinical Scenario. Return ONLY JSON: {{'question','options','answer','explanation','link','hint'}}."
-    
+    prompt = f"""
+    Topic: {topic}. Difficulty: {difficulty}. 
+    Mode: {'General BD Chaurasia Quiz' if mode == 'general' else 'Physiotherapy Clinical Scenario'}.
+    Generate a question and return ONLY JSON: 
+    {{'question','options','answer','explanation','link','hint','image_prompt'}}.
+    The 'image_prompt' should be a descriptive prompt for an AI to generate a clinical image of the condition.
+    """
     response = model.generate_content(prompt)
     return json.loads(clean_json_response(response.text))
 
 def ask_patient_ai(question, context):
     prompt = f"Patient scenario: {context}. User asks: '{question}'. Respond as the patient based on BD Chaurasia anatomy. Short reply."
     return model.generate_content(prompt).text
+
+def generate_clinical_image(prompt):
+    # This uses the built-in image generation capability
+    image = genai.Image.generate(prompt=f"Medical illustration: {prompt}, high quality, anatomical accuracy")
+    return image
 
 def main():
     st.set_page_config(page_title="Achu's Anatomy Lab", page_icon="🧬", layout="centered")
@@ -102,6 +109,13 @@ def main():
             st.write(f"#### {st.session_state.topic} Challenge")
             st.write(f"**Scenario:** {data['question']}")
 
+            # Hard Mode Visual Aid
+            if st.session_state.difficulty == "Hard" and st.session_state.game_mode == "physio":
+                if st.button("📸 Generate Clinical Image (Hard Mode Only)"):
+                    with st.spinner("Generating anatomical visualization..."):
+                        img = generate_clinical_image(data['image_prompt'])
+                        st.image(img)
+
             if st.session_state.game_mode == "physio":
                 st.write("🩺 **Patient Chat:**")
                 for chat in st.session_state.patient_chat:
@@ -134,7 +148,6 @@ def main():
                     st.session_state.quiz_feedback = ("error", f"❌ Wrong! Correct: {data['answer']}", get_manglish_comment(False), data['explanation'], data['link'])
                 st.rerun()
         else:
-            # RENAMED 'type' to 'f_type' to fix AttributeError
             f_type, f_msg, f_comment, f_logic, f_link = st.session_state.quiz_feedback
             if f_type == "success": st.success(f_msg)
             else: st.error(f_msg)
