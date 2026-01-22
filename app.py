@@ -37,8 +37,8 @@ def get_anatomy_data(mode, topic, difficulty):
     Topic: {topic}. Difficulty: {difficulty}. 
     Mode: {'General BD Chaurasia Quiz' if mode == 'general' else 'Physiotherapy Clinical Scenario'}.
     Generate a question and return ONLY JSON: 
-    {{'question','options','answer','explanation','link','hint','image_prompt'}}.
-    The 'image_prompt' should be a descriptive prompt for an AI to generate a clinical image of the condition.
+    {{'question','options','answer','explanation','link','hint','diagram_query'}}.
+    The 'diagram_query' should be a simple 2-3 word name of the anatomical structure involved (e.g., 'Brachial Plexus' or 'Sciatic Nerve').
     """
     response = model.generate_content(prompt)
     return json.loads(clean_json_response(response.text))
@@ -46,11 +46,6 @@ def get_anatomy_data(mode, topic, difficulty):
 def ask_patient_ai(question, context):
     prompt = f"Patient scenario: {context}. User asks: '{question}'. Respond as the patient based on BD Chaurasia anatomy. Short reply."
     return model.generate_content(prompt).text
-
-def generate_clinical_image(prompt):
-    # This uses the built-in image generation capability
-    image = genai.Image.generate(prompt=f"Medical illustration: {prompt}, high quality, anatomical accuracy")
-    return image
 
 def main():
     st.set_page_config(page_title="Achu's Anatomy Lab", page_icon="🧬", layout="centered")
@@ -75,6 +70,7 @@ def main():
         .stButton>button {{ border-radius: 10px; font-weight: bold; width: 100%; background: linear-gradient(135deg, #005f73 0%, #0a9396 100%); color: white !important; height: 3.5em; border: none; }}
         .chat-bubble {{ background: rgba(255,255,255,0.1); padding: 10px; border-radius: 10px; margin: 5px 0; border-left: 3px solid #00d4ff; }}
         </style>
+        
         <div class="header-container">
             <video class="logo-video" autoplay muted loop playsinline src="data:video/webm;base64,{logo_str}"></video>
             <h1 style="color:white; text-align:center;">Achu's Anatomy & Physio Lab</h1>
@@ -109,12 +105,9 @@ def main():
             st.write(f"#### {st.session_state.topic} Challenge")
             st.write(f"**Scenario:** {data['question']}")
 
-            # Hard Mode Visual Aid
-            if st.session_state.difficulty == "Hard" and st.session_state.game_mode == "physio":
-                if st.button("📸 Generate Clinical Image (Hard Mode Only)"):
-                    with st.spinner("Generating anatomical visualization..."):
-                        img = generate_clinical_image(data['image_prompt'])
-                        st.image(img)
+            # Fixed Visual Aid for Hard Mode
+            if st.session_state.difficulty == "Hard":
+                st.write(f"🔍 **Clinical Reference:** }]")
 
             if st.session_state.game_mode == "physio":
                 st.write("🩺 **Patient Chat:**")
